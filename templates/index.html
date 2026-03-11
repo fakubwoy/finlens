@@ -1264,7 +1264,7 @@
 </div>
 
 <!-- Edit/Add Row Modal -->
-<div id="masterRowModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+<div id="masterRowModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
   <div style="background:#0f1117;border:1px solid #1e2433;border-radius:16px;padding:2rem;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;position:relative">
     <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:white;margin-bottom:1.5rem" id="masterModalTitle">Add Account</div>
 
@@ -1418,6 +1418,41 @@
                 <span class="type-chip">Personal Finance</span>
                 <span class="type-chip">Any CSV / Excel</span>
             </div>
+        </div>
+
+        <!-- CoA Onboarding Tip -->
+        <div id="coaTip" style="margin-top:1rem;padding:0.9rem 1.1rem;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;display:flex;gap:0.85rem;align-items:flex-start">
+            <span style="font-size:1.1rem;flex-shrink:0;margin-top:0.05rem">💡</span>
+            <div style="flex:1">
+                <div style="font-family:'Syne',sans-serif;font-weight:600;font-size:0.82rem;color:#fbbf24;margin-bottom:0.3rem">
+                    Have a company Chart of Accounts?
+                    <button onclick="var d=document.getElementById('coaDetails');var open=d.style.display!=='none';d.style.display=open?'none':'block';this.textContent=open?'Show details ▼':'Hide details ▲';" style="background:none;border:none;color:#fbbf24;font-size:0.75rem;cursor:pointer;margin-left:0.4rem;opacity:0.8">Show details ▼</button>
+                </div>
+                <div style="color:#94a3b8;font-size:0.78rem;line-height:1.5">
+                    Upload your CoA Excel <strong style="color:#e2e8f0">first</strong>, then upload your bank statement — classifications will match your exact GL codes and expense heads.
+                    Without it, the system uses a built-in set of ~40 common Indian expense categories.
+                </div>
+                <div id="coaDetails" style="display:none;margin-top:0.75rem;border-top:1px solid rgba(251,191,36,0.15);padding-top:0.75rem">
+                    <div style="color:#94a3b8;font-size:0.76rem;margin-bottom:0.5rem">Your CoA file should have these columns (only <strong style="color:#e2e8f0">account_name</strong> is required):</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.74rem">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;color:#64748b;padding:0.25rem 0.5rem;border-bottom:1px solid #1e2433">Column</th>
+                                <th style="text-align:left;color:#64748b;padding:0.25rem 0.5rem;border-bottom:1px solid #1e2433">Purpose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td style="padding:0.25rem 0.5rem;color:#a5b4fc;font-family:monospace">account_name</td><td style="padding:0.25rem 0.5rem;color:#94a3b8">Expense head name <span style="color:#f87171">*required</span></td></tr>
+                            <tr><td style="padding:0.25rem 0.5rem;color:#a5b4fc;font-family:monospace">code</td><td style="padding:0.25rem 0.5rem;color:#94a3b8">GL / ledger code (e.g. 5001)</td></tr>
+                            <tr><td style="padding:0.25rem 0.5rem;color:#a5b4fc;font-family:monospace">llm_keywords</td><td style="padding:0.25rem 0.5rem;color:#94a3b8">Comma-separated keywords for matching</td></tr>
+                            <tr><td style="padding:0.25rem 0.5rem;color:#a5b4fc;font-family:monospace">gst_flag</td><td style="padding:0.25rem 0.5rem;color:#94a3b8">GST applicability (Y/N)</td></tr>
+                            <tr><td style="padding:0.25rem 0.5rem;color:#a5b4fc;font-family:monospace">tds_section</td><td style="padding:0.25rem 0.5rem;color:#94a3b8">TDS section (e.g. 194C, 194J)</td></tr>
+                            <tr><td style="padding:0.25rem 0.5rem;color:#a5b4fc;font-family:monospace">is_active</td><td style="padding:0.25rem 0.5rem;color:#94a3b8">Set to false to exclude a row</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <button onclick="document.getElementById('coaTip').style.display='none'" style="background:none;border:none;color:#64748b;font-size:1rem;cursor:pointer;flex-shrink:0;line-height:1;padding:0" title="Dismiss">✕</button>
         </div>
 
         <!-- File info strip -->
@@ -1672,6 +1707,7 @@
                             <th>Confidence</th>
                             <th>Method</th>
                             <th>Status</th>
+                            <th style="width:60px"></th>
                         </tr>
                     </thead>
                     <tbody id="resultsTableBody"></tbody>
@@ -1684,6 +1720,31 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- Correction Modal -->
+<div id="correctionModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1100;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+    <div style="background:#0f1117;border:1px solid #1e2433;border-radius:16px;padding:1.75rem;width:100%;max-width:480px;position:relative">
+        <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:white;margin-bottom:0.25rem">Correct Classification</div>
+        <div id="corrModalDesc" style="color:#64748b;font-size:0.78rem;margin-bottom:1.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">Current Category</label>
+        <div id="corrModalCurrent" style="margin:0.3rem 0 1rem;padding:0.5rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:#94a3b8;font-size:0.85rem"></div>
+
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">New Category <span style="color:#f87171">*</span></label>
+        <div style="position:relative;margin-top:0.3rem">
+            <input id="corrCategorySearch" type="text" placeholder="Search or type category..." autocomplete="off"
+                style="width:100%;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none"
+                oninput="filterCorrCategories(this.value)">
+            <div id="corrCategoryList" style="position:absolute;top:calc(100% + 4px);left:0;right:0;background:#0f1117;border:1px solid #1e2433;border-radius:8px;max-height:200px;overflow-y:auto;z-index:10;display:none"></div>
+        </div>
+        <input id="corrCategorySelected" type="hidden">
+
+        <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+            <button onclick="closeCorrectionModal()" style="flex:1;padding:0.6rem;background:transparent;border:1px solid #1e2433;border-radius:8px;color:#64748b;font-family:'Syne',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer">Cancel</button>
+            <button onclick="submitCorrection()" style="flex:2;padding:0.6rem;background:#818cf8;border:none;border-radius:8px;color:white;font-family:'Syne',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer">Save Correction</button>
+        </div>
+    </div>
+</div>
 
 <script>
 const API = '/api';
@@ -2593,12 +2654,13 @@ function renderTable(results) {
             ? `₹${rawAmt.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}`
             : '—';
 
+        const rowIdx = display.indexOf(row);
         tbody.innerHTML += `
-            <tr data-status="${row.Status}" data-method="${row.Method || ''}">
+            <tr data-status="${row.Status}" data-method="${row.Method || ''}" id="txn-row-${rowIdx}">
                 <td style="color:var(--muted2);font-size:0.78rem;white-space:nowrap">${dateVal}</td>
                 <td class="td-desc" title="${descVal}">${descVal}</td>
                 <td class="td-amount">${amtVal}</td>
-                <td><span class="cat-badge ${catClass}">${row.Category || 'Other'}</span></td>
+                <td id="cat-cell-${rowIdx}"><span class="cat-badge ${catClass}">${row.Category || 'Other'}</span></td>
                 <td>
                     <div class="conf-bar-wrap">
                         <div class="conf-mini"><div class="conf-mini-fill" style="width:${confPct}%;background:${confColor}"></div></div>
@@ -2606,7 +2668,16 @@ function renderTable(results) {
                     </div>
                 </td>
                 <td><span style="font-size:0.72rem;font-weight:600;color:${methodColor}">${methodLabel}</span></td>
-                <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+                <td id="status-cell-${rowIdx}"><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+                <td>
+                    <button onclick="openCorrectionEditor(${rowIdx}, '${(descVal||'').replace(/'/g,"\\'")}', '${(row.Category||'Other').replace(/'/g,"\\'")}', '${amtVal}')"
+                        title="Correct category"
+                        style="background:none;border:1px solid #1e2433;border-radius:6px;color:#64748b;padding:0.2rem 0.45rem;cursor:pointer;font-size:0.72rem;transition:all 0.15s"
+                        onmouseover="this.style.borderColor='#818cf8';this.style.color='#a5b4fc'"
+                        onmouseout="this.style.borderColor='#1e2433';this.style.color='#64748b'">
+                        ✏️
+                    </button>
+                </td>
             </tr>`;
     });
 
@@ -2615,6 +2686,118 @@ function renderTable(results) {
             ? `Showing ${display.length} of ${results.length.toLocaleString()}`
             : `${results.length.toLocaleString()} total`;
 }
+
+// ─── Inline Correction ──────────────────────────────────────────
+let _corrRowIdx = null;
+let _corrDesc = null;
+
+function openCorrectionEditor(rowIdx, desc, currentCat, amt) {
+    _corrRowIdx = rowIdx;
+    _corrDesc = desc;
+    document.getElementById('corrModalDesc').textContent = desc + (amt && amt !== '—' ? '  ·  ' + amt : '');
+    document.getElementById('corrModalCurrent').textContent = currentCat;
+    document.getElementById('corrCategorySearch').value = '';
+    document.getElementById('corrCategorySelected').value = '';
+    document.getElementById('corrCategoryList').style.display = 'none';
+
+    // Populate category list from loaded results
+    renderCorrCategories('');
+
+    const modal = document.getElementById('correctionModal');
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('corrCategorySearch').focus(), 100);
+}
+
+function closeCorrectionModal() {
+    document.getElementById('correctionModal').style.display = 'none';
+    _corrRowIdx = null;
+    _corrDesc = null;
+}
+
+function getAllCategories() {
+    const cats = new Set();
+    (state.allResults || []).forEach(r => { if (r.Category) cats.add(r.Category); });
+    // Also include any categories from the master if loaded
+    return Array.from(cats).sort();
+}
+
+function renderCorrCategories(query) {
+    const list = document.getElementById('corrCategoryList');
+    const cats = getAllCategories().filter(c => !query || c.toLowerCase().includes(query.toLowerCase()));
+    if (!cats.length) { list.style.display = 'none'; return; }
+    list.innerHTML = cats.map(c => `
+        <div onclick="selectCorrCategory('${c.replace(/'/g, "\'")}')"
+            style="padding:0.5rem 0.75rem;cursor:pointer;color:#e2e8f0;font-size:0.82rem;border-bottom:1px solid #1e2433;transition:background 0.1s"
+            onmouseover="this.style.background='#171b27'" onmouseout="this.style.background='transparent'">
+            ${c}
+        </div>`).join('');
+    list.style.display = 'block';
+}
+
+function filterCorrCategories(query) {
+    renderCorrCategories(query);
+    document.getElementById('corrCategorySelected').value = '';
+}
+
+function selectCorrCategory(cat) {
+    document.getElementById('corrCategorySearch').value = cat;
+    document.getElementById('corrCategorySelected').value = cat;
+    document.getElementById('corrCategoryList').style.display = 'none';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#corrCategorySearch') && !e.target.closest('#corrCategoryList')) {
+        const list = document.getElementById('corrCategoryList');
+        if (list) list.style.display = 'none';
+    }
+});
+
+async function submitCorrection() {
+    const cat = document.getElementById('corrCategorySelected').value || document.getElementById('corrCategorySearch').value.trim();
+    if (!cat) { toast('Please select or type a category', 'error'); return; }
+    if (!_corrDesc) { closeCorrectionModal(); return; }
+
+    try {
+        const res = await fetch(`${API}/update-classification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ description: _corrDesc, category: cat })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed');
+
+        // Update the in-memory results
+        const rowIdx = _corrRowIdx;
+        if (state.allResults && state.allResults[rowIdx]) {
+            state.allResults[rowIdx].Category = cat;
+            state.allResults[rowIdx].Status = 'Approved';
+            state.allResults[rowIdx].Method = 'corrected';
+        }
+
+        // Update the DOM cell directly
+        const catCell = document.getElementById(`cat-cell-${rowIdx}`);
+        const statusCell = document.getElementById(`status-cell-${rowIdx}`);
+        if (catCell) {
+            catCell.innerHTML = `<span class="cat-badge" style="background:rgba(52,211,153,0.1);color:#34d399;border-color:rgba(52,211,153,0.25)">${cat}</span>
+                <span style="font-size:0.65rem;color:#34d399;display:block;margin-top:2px;font-weight:600">✓ Corrected</span>`;
+        }
+        if (statusCell) {
+            statusCell.innerHTML = `<span class="status-badge status-approved">Approved</span>`;
+        }
+
+        toast(`Saved — future "${_corrDesc.slice(0,30)}…" transactions will auto-classify as "${cat}"`, 'success');
+        closeCorrectionModal();
+    } catch (err) {
+        toast('Could not save correction: ' + err.message, 'error');
+    }
+}
+
+// Close modal on backdrop click
+document.getElementById('correctionModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCorrectionModal();
+});
 
 // ─── Filters ───────────────────────────────────────────────────
 function filterTable(filter, btn) {
