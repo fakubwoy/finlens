@@ -22,6 +22,14 @@ except ImportError:
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'change-me-in-production')
+
+# Cookie settings — must be Secure + SameSite=None for Railway HTTPS
+# (SameSite=Lax is fine when frontend and backend share the same domain, which they do on Railway)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('RAILWAY_ENVIRONMENT') is not None
+app.config['PERMANENT_SESSION_LIFETIME'] = 60 * 60 * 24 * 30  # 30 days
+
 CORS(app, supports_credentials=True)
 
 UPLOAD_FOLDER = 'uploads'
@@ -259,6 +267,7 @@ def signup():
         )
         user = dict(cur.fetchone())
         conn.commit(); cur.close(); conn.close()
+        session.permanent = True
         session['user_id']    = user['id']
         session['user_name']  = user['name']
         session['user_email'] = user['email']
@@ -284,6 +293,7 @@ def login():
         cur.close(); conn.close()
         if not user or not check_password_hash(user['password'], password):
             return jsonify({'error': 'Invalid email or password'}), 401
+        session.permanent = True
         session['user_id']    = user['id']
         session['user_name']  = user['name']
         session['user_email'] = user['email']
