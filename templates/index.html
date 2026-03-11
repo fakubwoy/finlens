@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finlens — Smart Expense Intelligence</title>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         :root {
             --bg: #0c0e14;
@@ -468,6 +469,20 @@
             padding: 1.25rem 1.5rem;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .stat-card-top {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .stat-card-body {
+            flex: 1;
+            min-width: 0;
         }
 
         .stat-card::before {
@@ -486,7 +501,7 @@
         .stat-card.teal::before { background: #5eead4; }
         .stat-card.rose::before { background: #fb7185; }
 
-        .stat-icon { font-size: 1.1rem; margin-bottom: 0.6rem; display: block; opacity: 0.7; }
+        .stat-icon { font-size: 1.1rem; display: block; opacity: 0.7; flex-shrink: 0; }
 
         .stat-num {
             font-family: 'Syne', sans-serif;
@@ -494,7 +509,7 @@
             font-weight: 800;
             color: white;
             line-height: 1;
-            margin-bottom: 0.3rem;
+            margin-bottom: 0;
         }
 
         .stat-label {
@@ -900,6 +915,137 @@
             to   { opacity: 1; transform: translateY(0); }
         }
 
+        .stat-icon-svg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+            color: var(--muted2);
+            flex-shrink: 0;
+        }
+        .stat-card.teal .stat-icon-svg { color: var(--accent); background: rgba(110,231,183,0.08); }
+        .stat-card.blue .stat-icon-svg { color: #38bdf8; background: rgba(56,189,248,0.08); }
+        .stat-card.green .stat-icon-svg { color: var(--success); background: rgba(52,211,153,0.08); }
+        .stat-card.amber .stat-icon-svg { color: #fbbf24; background: rgba(251,191,36,0.08); }
+        .stat-card.purple .stat-icon-svg { color: #a78bfa; background: rgba(167,139,250,0.08); }
+
+        /* ─── ANALYTICS SECTION ─── */
+        .analytics-section {
+            margin-bottom: 1.5rem;
+        }
+        .analytics-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .analytics-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--muted2);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .analytics-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 900px) {
+            .analytics-grid, .analytics-grid-3 { grid-template-columns: 1fr; }
+        }
+        .chart-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+        .chart-panel-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--muted2);
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            margin-bottom: 0.25rem;
+        }
+        .chart-panel-sub {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-bottom: 1.25rem;
+        }
+        .chart-container {
+            position: relative;
+        }
+        .chart-container canvas {
+            max-width: 100%;
+        }
+        /* top vendors list */
+        .vendor-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .vendor-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 0.85rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+        }
+        .vendor-name { font-size: 0.82rem; color: var(--text); font-weight: 500; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .vendor-amount { font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 700; color: white; }
+        .vendor-count { font-size: 0.72rem; color: var(--muted); }
+        /* confidence histogram */
+        .conf-hist { display: flex; align-items: flex-end; gap: 3px; height: 80px; }
+        .conf-hist-bar { flex: 1; border-radius: 3px 3px 0 0; min-width: 8px; transition: height 0.5s ease; position: relative; }
+        .conf-hist-bar:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface2);
+            border: 1px solid var(--border-bright);
+            border-radius: 6px;
+            padding: 0.2rem 0.5rem;
+            font-size: 0.65rem;
+            color: var(--text);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .conf-hist-labels { display: flex; justify-content: space-between; margin-top: 0.35rem; }
+        .conf-hist-label { font-size: 0.65rem; color: var(--muted); }
+        /* spend trend */
+        .trend-empty { font-size: 0.8rem; color: var(--muted); text-align: center; padding: 2rem 0; }
+        /* summary kpi strip */
+        .kpi-strip {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .kpi-item {
+            flex: 1;
+            min-width: 120px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+        }
+        .kpi-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.4rem; }
+        .kpi-value { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: white; }
+        .kpi-delta { font-size: 0.72rem; margin-top: 0.2rem; }
+
         .fade-up { animation: fadeUp 0.4s ease forwards; }
 
         /* Preview section */
@@ -972,7 +1118,7 @@
 
     <!-- HERO -->
     <div class="hero fade-up">
-        <div class="hero-eyebrow">⚡ Powered by AI</div>
+        <div class="hero-eyebrow">Powered by AI</div>
         <h1>Drop any financial file.<br><em>Get instant clarity.</em></h1>
         <p>Upload your bank statement, business expenses, or any transaction file — we'll automatically detect, classify, and surface insights.</p>
     </div>
@@ -981,7 +1127,9 @@
     <div class="upload-section fade-up">
         <div class="upload-zone" id="uploadZone">
             <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
-            <div class="upload-icon-wrap" id="uploadIcon">📂</div>
+            <div class="upload-icon-wrap" id="uploadIcon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--muted2)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
             <h3>Drop your file here</h3>
             <p>Or click to browse from your computer</p>
             <div class="upload-types">
@@ -994,7 +1142,7 @@
 
         <!-- File info strip -->
         <div class="file-info" id="fileInfo">
-            <div class="file-icon">📄</div>
+            <div class="file-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
             <div class="file-details">
                 <div class="file-name" id="fileName">—</div>
                 <div class="file-meta" id="fileMeta">—</div>
@@ -1070,42 +1218,66 @@
         <!-- Stats Row 1 -->
         <div class="stat-row fade-up">
             <div class="stat-card">
-                <span class="stat-icon">📊</span>
-                <div class="stat-num" id="statTotal">—</div>
-                <div class="stat-label">Total Transactions</div>
+                <div class="stat-card-top">
+                    <span class="stat-icon stat-icon-svg"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+                    <div class="stat-num" id="statTotal">—</div>
+                </div>
+                <div class="stat-card-body">
+                    <div class="stat-label">Total Transactions</div>
+                </div>
             </div>
             <div class="stat-card teal">
-                <span class="stat-icon">💰</span>
-                <div class="stat-num" id="statTotalSpend">—</div>
-                <div class="stat-label">Total Spend</div>
-                <div class="stat-sub" id="statSpendSub"></div>
+                <div class="stat-card-top">
+                    <span class="stat-icon stat-icon-svg"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+                    <div class="stat-num" id="statTotalSpend">—</div>
+                </div>
+                <div class="stat-card-body">
+                    <div class="stat-label">Total Spend</div>
+                    <div class="stat-sub" id="statSpendSub"></div>
+                </div>
             </div>
             <div class="stat-card blue">
-                <span class="stat-icon">📐</span>
-                <div class="stat-num" id="statAvg">—</div>
-                <div class="stat-label">Avg Transaction</div>
-                <div class="stat-sub" id="statAvgSub"></div>
+                <div class="stat-card-top">
+                    <span class="stat-icon stat-icon-svg"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span>
+                    <div class="stat-num" id="statAvg">—</div>
+                </div>
+                <div class="stat-card-body">
+                    <div class="stat-label">Avg Transaction</div>
+                    <div class="stat-sub" id="statAvgSub"></div>
+                </div>
             </div>
         </div>
         <!-- Stats Row 2 -->
         <div class="stat-row-2 fade-up">
             <div class="stat-card green">
-                <span class="stat-icon">✅</span>
-                <div class="stat-num" id="statHigh">—</div>
-                <div class="stat-label">Auto-Classified</div>
-                <div class="stat-sub" id="statHighPct"></div>
+                <div class="stat-card-top">
+                    <span class="stat-icon stat-icon-svg"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span>
+                    <div class="stat-num" id="statHigh">—</div>
+                </div>
+                <div class="stat-card-body">
+                    <div class="stat-label">Auto-Classified</div>
+                    <div class="stat-sub" id="statHighPct"></div>
+                </div>
             </div>
             <div class="stat-card amber">
-                <span class="stat-icon">🔍</span>
-                <div class="stat-num" id="statReview">—</div>
-                <div class="stat-label">Needs Review</div>
-                <div class="conf-dist" id="confDist"></div>
+                <div class="stat-card-top">
+                    <span class="stat-icon stat-icon-svg"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                    <div class="stat-num" id="statReview">—</div>
+                </div>
+                <div class="stat-card-body">
+                    <div class="stat-label">Needs Review</div>
+                    <div class="conf-dist" id="confDist"></div>
+                </div>
             </div>
             <div class="stat-card purple">
-                <span class="stat-icon">🏷️</span>
-                <div class="stat-num" id="statCategories">—</div>
-                <div class="stat-label">Categories Used</div>
-                <div class="stat-sub" id="statTopCat"></div>
+                <div class="stat-card-top">
+                    <span class="stat-icon stat-icon-svg"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
+                    <div class="stat-num" id="statCategories">—</div>
+                </div>
+                <div class="stat-card-body">
+                    <div class="stat-label">Categories Used</div>
+                    <div class="stat-sub" id="statTopCat"></div>
+                </div>
             </div>
         </div>
 
@@ -1113,8 +1285,72 @@
         <div class="insights-grid fade-up" id="insightsGrid" style="display:none">
         </div>
 
-        <!-- Breakdown grid -->
-        <div class="breakdown-grid">
+        <!-- ─── ANALYTICS SECTION ─── -->
+        <div class="analytics-section fade-up" id="analyticsSection" style="display:none">
+            <div class="analytics-header">
+                <div class="analytics-title">Analytics</div>
+            </div>
+
+            <!-- KPI Strip -->
+            <div class="kpi-strip" id="kpiStrip"></div>
+
+            <!-- Row 1: Pie + Bar chart -->
+            <div class="analytics-grid">
+                <div class="chart-panel">
+                    <div class="chart-panel-title">Spend by Category</div>
+                    <div class="chart-panel-sub">Proportional breakdown of total expenditure</div>
+                    <div class="chart-container" style="height:260px">
+                        <canvas id="chartPie"></canvas>
+                    </div>
+                </div>
+                <div class="chart-panel">
+                    <div class="chart-panel-title">Category Comparison</div>
+                    <div class="chart-panel-sub">Top categories by total spend</div>
+                    <div class="chart-container" style="height:260px">
+                        <canvas id="chartBar"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Trend + Classification -->
+            <div class="analytics-grid">
+                <div class="chart-panel">
+                    <div class="chart-panel-title">Spending Over Time</div>
+                    <div class="chart-panel-sub">Daily spend trend from transaction dates</div>
+                    <div class="chart-container" style="height:220px">
+                        <canvas id="chartTrend"></canvas>
+                    </div>
+                    <div class="trend-empty" id="trendEmpty" style="display:none">No date data available for timeline</div>
+                </div>
+                <div class="chart-panel">
+                    <div class="chart-panel-title">Classification Accuracy</div>
+                    <div class="chart-panel-sub">Confidence score distribution</div>
+                    <div class="chart-container" style="height:220px">
+                        <canvas id="chartConfidence"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 3: Top vendors + method doughnut -->
+            <div class="analytics-grid">
+                <div class="chart-panel">
+                    <div class="chart-panel-title">Top Vendors / Payees</div>
+                    <div class="chart-panel-sub">Highest spend vendors by total value</div>
+                    <div class="vendor-list" id="topVendorsList"></div>
+                </div>
+                <div class="chart-panel">
+                    <div class="chart-panel-title">Classification Method Split</div>
+                    <div class="chart-panel-sub">How transactions were classified</div>
+                    <div class="chart-container" style="height:200px">
+                        <canvas id="chartMethod"></canvas>
+                    </div>
+                    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem" id="methodBreakdownAnalytics"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Breakdown grid (original donut + bar, hidden) -->
+        <div class="breakdown-grid" id="legacyBreakdown" style="display:none">
             <div class="panel fade-up">
                 <div class="panel-title">Spending by Category</div>
                 <div id="categoryBars"></div>
@@ -1143,10 +1379,10 @@
             <div style="padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border);">
                 <div class="filter-bar">
                     <button class="filter-btn active" data-filter="all" onclick="filterTable('all',this)">All</button>
-                    <button class="filter-btn" data-filter="Approved" onclick="filterTable('Approved',this)">✅ Approved</button>
-                    <button class="filter-btn" data-filter="Needs Review" onclick="filterTable('Needs Review',this)">🔍 Needs Review</button>
-                    <button class="filter-btn" data-filter="ai" onclick="filterTable('ai',this)">🤖 AI Classified</button>
-                    <button class="filter-btn" data-filter="keyword" onclick="filterTable('keyword',this)">🔑 Keyword Match</button>
+                    <button class="filter-btn" data-filter="Approved" onclick="filterTable('Approved',this)">Approved</button>
+                    <button class="filter-btn" data-filter="Needs Review" onclick="filterTable('Needs Review',this)">Needs Review</button>
+                    <button class="filter-btn" data-filter="ai" onclick="filterTable('ai',this)">AI Classified</button>
+                    <button class="filter-btn" data-filter="keyword" onclick="filterTable('keyword',this)">Keyword Match</button>
                     <div class="filter-spacer"></div>
                     <input class="search-input" id="searchInput" type="text" placeholder="Search transactions..." oninput="searchTable(this.value)">
                 </div>
@@ -1239,7 +1475,7 @@ async function processFile(file) {
     formData.append('file', file);
 
     uploadZone.classList.add('has-file');
-    document.getElementById('uploadIcon').textContent = '⏳';
+    document.getElementById('uploadIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:#fbbf24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
 
     try {
         const res = await fetch(`${API}/upload`, { method: 'POST', body: formData });
@@ -1266,7 +1502,7 @@ async function processFile(file) {
             document.getElementById('fileTypeBadge').style.borderColor = 'rgba(129,140,248,0.3)';
 
             renderPreview(data.columns, data.preview, data.total_rows);
-            document.getElementById('uploadIcon').textContent = '📋';
+            document.getElementById('uploadIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--accent2)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>';
 
             // Show a prompt to now upload the transactions file
             showMasterLoadedBanner(data.categories_loaded, data.categories_sample);
@@ -1320,7 +1556,7 @@ async function processFile(file) {
         // Show controls
         document.getElementById('controlsPanel').classList.add('visible');
         document.getElementById('classifyBtn').disabled = false;
-        document.getElementById('uploadIcon').textContent = '✅';
+        document.getElementById('uploadIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--accent)"><polyline points="20 6 9 17 4 12"/></svg>';
 
         state.fileUploaded = true;
         state.transactionsLoaded = true;
@@ -1339,7 +1575,7 @@ async function processFile(file) {
         );
 
     } catch (err) {
-        document.getElementById('uploadIcon').textContent = '📂';
+        document.getElementById('uploadIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--muted2)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
         uploadZone.classList.remove('has-file');
         toast(err.message, 'error');
     }
@@ -1368,7 +1604,7 @@ function showMasterLoadedBanner(count, sample) {
     ).join('');
 
     banner.innerHTML = `
-        <span style="font-size:1.5rem;flex-shrink:0">📋</span>
+        <span style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:rgba(129,140,248,0.12)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
         <div>
             <div style="font-family:'Syne',sans-serif;font-weight:700;color:white;margin-bottom:0.35rem;">
                 Category master loaded — ${count} accounts
@@ -1747,18 +1983,18 @@ function renderResults(results, stats) {
     const insights = [];
     if (stats.needs_review > 0) {
         const reviewPct = Math.round(stats.needs_review / stats.total * 100);
-        insights.push({ icon: '🔍', text: `<strong>${stats.needs_review} transactions (${reviewPct}%)</strong> need manual review — low confidence classification.` });
+        insights.push({ icon: '!', text: `<strong>${stats.needs_review} transactions (${reviewPct}%)</strong> need manual review — low confidence classification.` });
     }
     if (stats.ai_classified > 0) {
-        insights.push({ icon: '🤖', text: `<strong>AI classified ${stats.ai_classified} transactions</strong> that keyword matching couldn't handle.` });
+        insights.push({ icon: 'AI', text: `<strong>AI classified ${stats.ai_classified} transactions</strong> that keyword matching couldn't handle.` });
     }
     const topSpend = Object.entries(stats.category_totals).sort((a,b)=>b[1]-a[1])[0];
     if (topSpend) {
-        insights.push({ icon: '📈', text: `Largest spend category: <strong>${topSpend[0]}</strong> at <strong>${fmtAmount(topSpend[1])}</strong>.` });
+        insights.push({ icon: '#1', text: `Largest spend category: <strong>${topSpend[0]}</strong> at <strong>${fmtAmount(topSpend[1])}</strong>.` });
     }
     const unmatched = stats.total - stats.ai_classified - stats.keyword_classified;
     if (unmatched > 0) {
-        insights.push({ icon: '⚠️', text: `<strong>${unmatched} transactions</strong> fell back to default — consider adding keywords for better coverage.` });
+        insights.push({ icon: '~', text: `<strong>${unmatched} transactions</strong> fell back to default — consider adding keywords for better coverage.` });
     }
 
     if (insights.length > 0) {
@@ -1796,9 +2032,9 @@ function renderResults(results, stats) {
     const methodEl = document.getElementById('methodBreakdown');
     const unclassified = Math.max(0, stats.total - stats.ai_classified - stats.keyword_classified);
     const methods = [
-        { label: '🤖 AI Classification',  color: '#818cf8', count: stats.ai_classified },
-        { label: '🔑 Keyword Match',       color: '#6ee7b7', count: stats.keyword_classified },
-        { label: '⚠️ Unclassified',        color: '#f87171', count: unclassified }
+        { label: 'AI Classification',  color: '#818cf8', count: stats.ai_classified },
+        { label: 'Keyword Match',       color: '#6ee7b7', count: stats.keyword_classified },
+        { label: 'Unclassified',        color: '#f87171', count: unclassified }
     ].filter(m => m.count > 0);
 
     methodEl.innerHTML = methods.map(m => `
@@ -1823,6 +2059,296 @@ function renderResults(results, stats) {
     const searchEl = document.getElementById('searchInput');
     if (searchEl) searchEl.value = '';
     renderTable(results);
+    renderAnalytics(results, stats);
+}
+
+// ─── Chart instances (so we can destroy on re-render) ─────────
+let _charts = {};
+function _destroyChart(id) {
+    if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+}
+
+const CHART_COLORS = [
+    '#6ee7b7','#818cf8','#fbbf24','#fb7185','#38bdf8',
+    '#a78bfa','#34d399','#fda468','#5eead4','#c4b5fd',
+    '#86efac','#fde047','#93c5fd','#f9a8d4','#fdba74'
+];
+
+const CHART_DEFAULTS = {
+    color: '#94a3b8',
+    font: { family: "'Inter', sans-serif", size: 11 },
+};
+
+function _chartTheme() {
+    return {
+        plugins: {
+            legend: { labels: { color: '#94a3b8', font: { family: "'Inter', sans-serif", size: 11 }, boxWidth: 12, padding: 12 } },
+            tooltip: {
+                backgroundColor: '#1a1e2b',
+                borderColor: 'rgba(255,255,255,0.1)',
+                borderWidth: 1,
+                titleColor: '#e2e8f0',
+                bodyColor: '#94a3b8',
+                padding: 10,
+                cornerRadius: 8,
+            }
+        },
+        scales: {
+            x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+        }
+    };
+}
+
+function renderAnalytics(results, stats) {
+    // Show analytics section
+    const section = document.getElementById('analyticsSection');
+    section.style.display = 'block';
+
+    const totals = stats.category_totals || {};
+    const counts = stats.category_counts || {};
+
+    // ── KPI Strip ──────────────────────────────────────────────
+    const kpiEl = document.getElementById('kpiStrip');
+    let totalSpend = 0;
+    results.forEach(r => { const a = parseFloat(r.Amount); if (!isNaN(a) && a > 0) totalSpend += a; });
+    const autoRate = stats.total > 0 ? Math.round(stats.high_confidence / stats.total * 100) : 0;
+    const catCount = Object.keys(counts).length;
+    const topEntry = Object.entries(totals).sort((a,b)=>b[1]-a[1])[0];
+    const highConfAvg = (() => {
+        const confs = results.map(r => parseFloat(r.Confidence)).filter(c => !isNaN(c));
+        return confs.length ? (confs.reduce((a,b)=>a+b,0) / confs.length * 100).toFixed(0) : 0;
+    })();
+
+    kpiEl.innerHTML = [
+        { label: 'Total Spend', value: fmtAmount(totalSpend), delta: `${results.filter(r => parseFloat(r.Amount) > 0).length} paid transactions`, color: '#6ee7b7' },
+        { label: 'Auto-Classification Rate', value: autoRate + '%', delta: `${stats.high_confidence} of ${stats.total} transactions`, color: '#818cf8' },
+        { label: 'Avg Confidence', value: highConfAvg + '%', delta: 'across all classifications', color: '#fbbf24' },
+        { label: 'Categories Active', value: catCount, delta: topEntry ? `Largest: ${topEntry[0]}` : '', color: '#38bdf8' },
+    ].map(k => `
+        <div class="kpi-item">
+            <div class="kpi-label">${k.label}</div>
+            <div class="kpi-value" style="color:${k.color}">${k.value}</div>
+            <div class="kpi-delta" style="color:var(--muted)">${k.delta}</div>
+        </div>`).join('');
+
+    // ── Pie Chart ─────────────────────────────────────────────
+    _destroyChart('pie');
+    const pieEntries = Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0, 10);
+    if (pieEntries.length > 0) {
+        _charts['pie'] = new Chart(document.getElementById('chartPie'), {
+            type: 'doughnut',
+            data: {
+                labels: pieEntries.map(([k]) => k),
+                datasets: [{
+                    data: pieEntries.map(([,v]) => v),
+                    backgroundColor: CHART_COLORS.slice(0, pieEntries.length),
+                    borderColor: '#0c0e14',
+                    borderWidth: 2,
+                    hoverOffset: 8,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10, padding: 8 } },
+                    tooltip: { ..._chartTheme().plugins.tooltip,
+                        callbacks: { label: (ctx) => ` ${ctx.label}: ${fmtAmount(ctx.raw)} (${Math.round(ctx.raw/totalSpend*100)}%)` }
+                    }
+                }
+            }
+        });
+    }
+
+    // ── Bar Chart (top categories) ────────────────────────────
+    _destroyChart('bar');
+    const barEntries = Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0, 8);
+    if (barEntries.length > 0) {
+        _charts['bar'] = new Chart(document.getElementById('chartBar'), {
+            type: 'bar',
+            data: {
+                labels: barEntries.map(([k]) => k.length > 16 ? k.slice(0,14)+'…' : k),
+                datasets: [{
+                    label: 'Total Spend',
+                    data: barEntries.map(([,v]) => v),
+                    backgroundColor: CHART_COLORS.slice(0, barEntries.length).map(c => c + 'cc'),
+                    borderColor: CHART_COLORS.slice(0, barEntries.length),
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { ..._chartTheme().plugins.tooltip,
+                    callbacks: { label: ctx => ` ${fmtAmount(ctx.raw)}` }
+                }},
+                scales: {
+                    x: { ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 30 }, grid: { display: false } },
+                    y: { ticks: { color: '#64748b', font: { size: 10 }, callback: v => fmtAmount(v) }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                }
+            }
+        });
+    }
+
+    // ── Trend Chart (spend over time) ────────────────────────
+    _destroyChart('trend');
+    const dateKey = results.length > 0 ? Object.keys(results[0]).find(k => k.toLowerCase().includes('date')) : null;
+    const trendCanvas = document.getElementById('chartTrend');
+    const trendEmpty = document.getElementById('trendEmpty');
+
+    if (dateKey) {
+        // Aggregate spend by date
+        const byDate = {};
+        results.forEach(r => {
+            const raw = r[dateKey] || '';
+            if (!raw) return;
+            // Normalise to YYYY-MM-DD or DD-MMM or MM-DD
+            const amt = parseFloat(r.Amount);
+            if (isNaN(amt) || amt <= 0) return;
+            const key = raw.slice(0, 10); // first 10 chars usually gives date part
+            byDate[key] = (byDate[key] || 0) + amt;
+        });
+        const dateEntries = Object.entries(byDate).sort((a,b) => a[0] > b[0] ? 1 : -1);
+        if (dateEntries.length > 1) {
+            trendCanvas.style.display = 'block';
+            trendEmpty.style.display = 'none';
+            _charts['trend'] = new Chart(trendCanvas, {
+                type: 'line',
+                data: {
+                    labels: dateEntries.map(([d]) => d),
+                    datasets: [{
+                        label: 'Daily Spend',
+                        data: dateEntries.map(([,v]) => v),
+                        borderColor: '#6ee7b7',
+                        backgroundColor: 'rgba(110,231,183,0.08)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: dateEntries.length > 30 ? 0 : 3,
+                        pointBackgroundColor: '#6ee7b7',
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { ..._chartTheme().plugins.tooltip,
+                        callbacks: { label: ctx => ` ${fmtAmount(ctx.raw)}` }
+                    }},
+                    scales: {
+                        x: { ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 8, maxRotation: 30 }, grid: { display: false } },
+                        y: { ticks: { color: '#64748b', font: { size: 10 }, callback: v => fmtAmount(v) }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                    }
+                }
+            });
+        } else {
+            trendCanvas.style.display = 'none';
+            trendEmpty.style.display = 'block';
+        }
+    } else {
+        trendCanvas.style.display = 'none';
+        trendEmpty.style.display = 'block';
+    }
+
+    // ── Confidence Distribution Chart ────────────────────────
+    _destroyChart('confidence');
+    const bins = new Array(10).fill(0); // 0-10%, 10-20% ... 90-100%
+    results.forEach(r => {
+        const c = parseFloat(r.Confidence) || 0;
+        const idx = Math.min(9, Math.floor(c * 10));
+        bins[idx]++;
+    });
+    _charts['confidence'] = new Chart(document.getElementById('chartConfidence'), {
+        type: 'bar',
+        data: {
+            labels: ['0–10%','10–20%','20–30%','30–40%','40–50%','50–60%','60–70%','70–80%','80–90%','90–100%'],
+            datasets: [{
+                label: 'Transactions',
+                data: bins,
+                backgroundColor: ['#f87171','#f87171','#fb923c','#fb923c','#fbbf24','#fbbf24','#a3e635','#6ee7b7','#34d399','#34d399'],
+                borderWidth: 0,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { ..._chartTheme().plugins.tooltip } },
+            scales: {
+                x: { ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 30 }, grid: { display: false } },
+                y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+            }
+        }
+    });
+
+    // ── Top Vendors ───────────────────────────────────────────
+    const descKey = results.length > 0 ? (Object.keys(results[0]).find(k => ['description','narration','desc','particulars','details','merchant'].includes(k.toLowerCase())) || Object.keys(results[0])[0]) : null;
+    const vendorList = document.getElementById('topVendorsList');
+    if (descKey) {
+        const vendorMap = {};
+        results.forEach(r => {
+            const name = (r[descKey] || '').slice(0, 30).trim();
+            if (!name) return;
+            const amt = parseFloat(r.Amount) || 0;
+            if (!vendorMap[name]) vendorMap[name] = { total: 0, count: 0 };
+            vendorMap[name].total += Math.abs(amt);
+            vendorMap[name].count++;
+        });
+        const topVendors = Object.entries(vendorMap).sort((a,b)=>b[1].total-a[1].total).slice(0,8);
+        vendorList.innerHTML = topVendors.map(([name, v]) => `
+            <div class="vendor-row">
+                <div>
+                    <div class="vendor-name" title="${name}">${name}</div>
+                    <div class="vendor-count">${v.count} transaction${v.count>1?'s':''}</div>
+                </div>
+                <div class="vendor-amount">${fmtAmount(v.total)}</div>
+            </div>`).join('');
+    } else {
+        vendorList.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:1rem 0">No description data available</div>';
+    }
+
+    // ── Method Doughnut ───────────────────────────────────────
+    _destroyChart('method');
+    const unclassifiedCount = Math.max(0, stats.total - stats.ai_classified - stats.keyword_classified);
+    const methodData = [
+        { label: 'AI Classification', value: stats.ai_classified, color: '#818cf8' },
+        { label: 'Keyword Match', value: stats.keyword_classified, color: '#6ee7b7' },
+        { label: 'Unclassified', value: unclassifiedCount, color: '#f87171' },
+    ].filter(m => m.value > 0);
+
+    _charts['method'] = new Chart(document.getElementById('chartMethod'), {
+        type: 'doughnut',
+        data: {
+            labels: methodData.map(m => m.label),
+            datasets: [{
+                data: methodData.map(m => m.value),
+                backgroundColor: methodData.map(m => m.color),
+                borderColor: '#0c0e14',
+                borderWidth: 2,
+                hoverOffset: 6,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            cutout: '55%',
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10, padding: 10 } },
+                tooltip: { ..._chartTheme().plugins.tooltip }
+            }
+        }
+    });
+
+    // Method summary text rows
+    const methodSummaryEl = document.getElementById('methodBreakdownAnalytics');
+    methodSummaryEl.innerHTML = methodData.map(m => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:0.5rem">
+                <div style="width:8px;height:8px;border-radius:50%;background:${m.color};flex-shrink:0"></div>
+                <span style="font-size:0.8rem;color:var(--text)">${m.label}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem">
+                <span style="font-size:0.72rem;color:var(--muted)">${Math.round(m.value/stats.total*100)}%</span>
+                <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:white">${m.value.toLocaleString()}</span>
+            </div>
+        </div>`).join('');
 }
 
 function renderTable(results) {
@@ -1838,14 +2364,14 @@ function renderTable(results) {
 
         let statusClass, statusLabel;
         if (row.Status === 'Approved') {
-            statusClass = 'status-approved'; statusLabel = '✓ Approved';
+            statusClass = 'status-approved'; statusLabel = 'Approved';
         } else if (conf < 0.4) {
-            statusClass = 'status-low'; statusLabel = '⚠ Low Confidence';
+            statusClass = 'status-low'; statusLabel = 'Low Confidence';
         } else {
-            statusClass = 'status-review'; statusLabel = '🔍 Review';
+            statusClass = 'status-review'; statusLabel = 'Review';
         }
 
-        const methodLabel = row.Method === 'ai' ? '🤖 AI' : row.Method === 'keyword' ? '🔑 KW' : '—';
+        const methodLabel = row.Method === 'ai' ? 'AI' : row.Method === 'keyword' ? 'KW' : '—';
         const methodColor = row.Method === 'ai' ? '#818cf8' : row.Method === 'keyword' ? '#6ee7b7' : '#64748b';
 
         const dateKey = Object.keys(row).find(k => k.toLowerCase().includes('date')) || '';
