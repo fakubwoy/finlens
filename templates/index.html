@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finlens — Smart Expense Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0c0e14;
+            --surface: #13161f;
+            --surface2: #1a1e2b;
+            --border: rgba(255,255,255,0.07);
+            --border-bright: rgba(255,255,255,0.14);
+            --accent: #6ee7b7;
+            --accent2: #818cf8;
+            --accent3: #fb923c;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --muted2: #94a3b8;
+            --danger: #f87171;
+            --success: #34d399;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Ambient background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -20%;
+            width: 60vw;
+            height: 60vh;
+            background: radial-gradient(ellipse, rgba(110,231,183,0.04) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -30%;
+            right: -10%;
+            width: 50vw;
+            height: 50vh;
+            background: radial-gradient(ellipse, rgba(129,140,248,0.04) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        /* ─── NAV ─── */
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2rem 0 3rem;
+        }
+
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: white;
+        }
+        .logo span { color: var(--accent); }
+
+        .nav-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: var(--muted2);
+        }
+        .nav-pill .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        /* ─── HERO ─── */
+        .hero {
+            text-align: center;
+            padding: 1rem 0 4rem;
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+            background: rgba(110,231,183,0.08);
+            border: 1px solid rgba(110,231,183,0.2);
+            border-radius: 100px;
+            padding: 0.4rem 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+            color: white;
+            margin-bottom: 1.25rem;
+        }
+
+        .hero h1 em {
+            font-style: normal;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--muted2);
+            max-width: 560px;
+            margin: 0 auto;
+            line-height: 1.7;
+            font-weight: 300;
+        }
+
+        /* ─── UPLOAD ZONE ─── */
+        .upload-section {
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone {
+            border: 1.5px dashed var(--border-bright);
+            border-radius: 20px;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--surface);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(110,231,183,0.06) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .upload-zone:hover::before,
+        .upload-zone.drag-over::before { opacity: 1; }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            border-color: rgba(110,231,183,0.4);
+            transform: translateY(-2px);
+        }
+
+        .upload-zone.has-file {
+            border-color: rgba(110,231,183,0.35);
+            background: rgba(110,231,183,0.04);
+        }
+
+        .upload-icon-wrap {
+            width: 72px;
+            height: 72px;
+            border-radius: 18px;
+            background: var(--surface2);
+            border: 1px solid var(--border-bright);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            transition: all 0.3s;
+        }
+
+        .upload-zone:hover .upload-icon-wrap {
+            background: rgba(110,231,183,0.1);
+            border-color: rgba(110,231,183,0.3);
+        }
+
+        .upload-zone h3 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone p {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-types {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .type-chip {
+            font-size: 0.72rem;
+            font-weight: 500;
+            background: var(--surface2);
+            border: 1px solid var(--border-bright);
+            border-radius: 6px;
+            padding: 0.3rem 0.7rem;
+            color: var(--muted2);
+        }
+
+        input[type="file"] { display: none; }
+
+        /* ─── FILE INFO ─── */
+        .file-info {
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            background: var(--surface2);
+            border: 1px solid rgba(110,231,183,0.2);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .file-info.visible { display: flex; }
+
+        .file-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            background: rgba(110,231,183,0.12);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .file-details { flex: 1; }
+        .file-name { font-weight: 500; color: white; font-size: 0.9rem; }
+        .file-meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem; }
+
+        .file-badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: rgba(110,231,183,0.12);
+            color: var(--accent);
+            border: 1px solid rgba(110,231,183,0.25);
+            border-radius: 6px;
+            padding: 0.3rem 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        /* ─── CONTROLS ─── */
+        .controls-panel {
+            display: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .controls-panel.visible { display: flex; }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .control-label {
+            font-size: 0.82rem;
+            color: var(--muted2);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        /* Toggle switch */
+        .toggle-wrap { display: flex; align-items: center; gap: 0.6rem; }
+        .toggle {
+            width: 40px; height: 22px;
+            background: var(--surface2);
+            border: 1px solid var(--border-bright);
+            border-radius: 100px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .toggle.on { background: rgba(110,231,183,0.25); border-color: rgba(110,231,183,0.5); }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: var(--muted);
+            transition: all 0.2s;
+        }
+        .toggle.on::after { left: 20px; background: var(--accent); }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 120px; height: 4px;
+            background: var(--surface2);
+            border-radius: 2px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 0 3px rgba(110,231,183,0.2);
+        }
+
+        .threshold-val {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--accent);
+            min-width: 2.5rem;
+        }
+
+        .controls-spacer { flex: 1; }
+
+        /* ─── CLASSIFY BUTTON ─── */
+        .classify-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 1.1rem 2rem;
+            background: linear-gradient(135deg, var(--accent), #34d399);
+            color: #0c1a14;
+            font-family: 'Syne', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.25s;
+            margin-top: 1.5rem;
+            letter-spacing: 0.01em;
+            box-shadow: 0 4px 24px rgba(110,231,183,0.25);
+        }
+
+        .classify-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(110,231,183,0.35);
+        }
+
+        .classify-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .classify-btn .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(0,0,0,0.3);
+            border-top-color: #0c1a14;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+
+        .classify-btn.loading .spinner { display: block; }
+        .classify-btn.loading .btn-text { opacity: 0.7; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── RESULTS ─── */
+        #resultsArea { display: none; }
+        #resultsArea.visible { display: block; }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-top: 1rem;
+        }
+
+        .results-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .download-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1.25rem;
+            background: var(--surface);
+            border: 1px solid var(--border-bright);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .download-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* ─── STAT CARDS ─── */
+        .stat-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .stat-row-2 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .stat-row, .stat-row-2 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; right: 0;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            opacity: 0.06;
+            transform: translate(20px,-20px);
+        }
+        .stat-card.green::before { background: var(--success); }
+        .stat-card.amber::before { background: #fb923c; }
+        .stat-card.purple::before { background: var(--accent2); }
+        .stat-card.blue::before { background: #38bdf8; }
+        .stat-card.teal::before { background: #5eead4; }
+        .stat-card.rose::before { background: #fb7185; }
+
+        .stat-icon { font-size: 1.1rem; margin-bottom: 0.6rem; display: block; opacity: 0.7; }
+
+        .stat-num {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: white;
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-label {
+            font-size: 0.73rem;
+            color: var(--muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+
+        .stat-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.3rem; }
+
+        .stat-card.green .stat-num { color: var(--success); }
+        .stat-card.amber .stat-num { color: #fb923c; }
+        .stat-card.purple .stat-num { color: var(--accent2); }
+        .stat-card.blue .stat-num { color: #38bdf8; }
+        .stat-card.teal .stat-num { color: #5eead4; }
+        .stat-card.rose .stat-num { color: #fb7185; }
+
+        /* ─── CONFIDENCE DISTRIBUTION BAR ─── */
+        .conf-dist { display: flex; height: 6px; border-radius: 3px; overflow: hidden; gap: 2px; margin-top: 0.5rem; }
+        .conf-dist-seg { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+        /* ─── FILTER BAR ─── */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.4rem 0.9rem;
+            border-radius: 100px;
+            border: 1px solid var(--border-bright);
+            background: var(--surface);
+            color: var(--muted2);
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.03em;
+        }
+        .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .filter-btn.active { background: rgba(110,231,183,0.12); border-color: rgba(110,231,183,0.4); color: var(--accent); }
+        .filter-spacer { flex: 1; }
+        .search-input {
+            background: var(--surface);
+            border: 1px solid var(--border-bright);
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            color: var(--text);
+            font-size: 0.78rem;
+            outline: none;
+            width: 180px;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus { border-color: rgba(110,231,183,0.4); }
+        .search-input::placeholder { color: var(--muted); }
+
+        /* ─── DONUT CHART ─── */
+        .donut-wrap {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .donut-svg { flex-shrink: 0; }
+        .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+        .donut-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.78rem;
+            color: var(--text);
+        }
+        .donut-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .donut-legend-pct { margin-left: auto; font-weight: 600; color: var(--muted2); font-size: 0.72rem; }
+
+        /* ─── INSIGHTS PANEL ─── */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 900px) { .insights-grid { grid-template-columns: 1fr; } }
+        .insight-item {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.9rem 1.1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+        .insight-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.05rem; }
+        .insight-text { font-size: 0.8rem; color: var(--muted2); line-height: 1.5; }
+        .insight-text strong { color: var(--text); font-weight: 600; }
+
+        /* ─── BREAKDOWN ─── */
+        .breakdown-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .breakdown-grid { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .panel-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--muted2);
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            margin-bottom: 1.25rem;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .bar-label {
+            font-size: 0.82rem;
+            color: var(--text);
+            width: 140px;
+            flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 6px;
+            background: var(--surface2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--accent), #34d399);
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bar-val {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--muted2);
+            width: 70px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        /* Donut chart placeholder */
+        .method-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .method-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--surface2);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .method-left {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .method-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+        }
+
+        .method-name { font-size: 0.85rem; color: var(--text); }
+        
+        .method-count {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+        }
+
+        /* ─── TABLE ─── */
+        .table-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--muted2);
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+        }
+
+        .table-count {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        .table-wrap { overflow-x: hidden; width: 100%; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        /* Column widths — fixed to prevent overflow */
+        thead th:nth-child(1) { width: 90px; }   /* Date */
+        thead th:nth-child(2) { width: auto; }    /* Description — flex */
+        thead th:nth-child(3) { width: 100px; }  /* Amount */
+        thead th:nth-child(4) { width: 160px; }  /* Category */
+        thead th:nth-child(5) { width: 90px; }   /* Confidence */
+        thead th:nth-child(6) { width: 52px; }   /* Method */
+        thead th:nth-child(7) { width: 100px; }  /* Status */
+
+        thead th {
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            padding: 0.7rem 0.75rem;
+            text-align: left;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+        tbody td {
+            padding: 0.7rem 0.75rem;
+            font-size: 0.82rem;
+            color: var(--text);
+            vertical-align: middle;
+            overflow: hidden;
+        }
+
+        .td-desc {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+            max-width: 0; /* forces ellipsis in fixed layout */
+        }
+
+        .td-amount {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cat-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 0.2rem 0.5rem;
+            border-radius: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .conf-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .conf-mini {
+            width: 36px; height: 4px;
+            background: var(--surface2);
+            border-radius: 2px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .conf-mini-fill { height: 100%; border-radius: 2px; }
+        .conf-pct { font-size: 0.72rem; color: var(--muted2); font-weight: 600; white-space: nowrap; }
+
+        .status-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.2rem 0.5rem;
+            border-radius: 5px;
+            white-space: nowrap;
+            display: inline-block;
+        }
+
+
+
+        .status-review {
+            background: rgba(251,146,60,0.1);
+            color: #fb923c;
+            border: 1px solid rgba(251,146,60,0.2);
+        }
+
+        .status-low {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.2);
+        }
+
+        .status-approved {
+            background: rgba(52,211,153,0.1);
+            color: #34d399;
+            border: 1px solid rgba(52,211,153,0.2);
+        }
+
+        /* ─── TOAST ─── */
+        .toast {
+            position: fixed;
+            bottom: 2rem; right: 2rem;
+            background: var(--surface);
+            border: 1px solid var(--border-bright);
+            border-radius: 12px;
+            padding: 0.85rem 1.25rem;
+            font-size: 0.85rem;
+            color: var(--text);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 100;
+            max-width: 360px;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.error { border-color: rgba(248,113,113,0.4); color: #f87171; }
+        .toast.success { border-color: rgba(52,211,153,0.4); color: #34d399; }
+
+        /* Category colors palette */
+        .cat-0  { background: rgba(110,231,183,0.1); color: #6ee7b7; }
+        .cat-1  { background: rgba(129,140,248,0.1); color: #818cf8; }
+        .cat-2  { background: rgba(251,191,36,0.1);  color: #fbbf24; }
+        .cat-3  { background: rgba(251,113,133,0.1); color: #fb7185; }
+        .cat-4  { background: rgba(56,189,248,0.1);  color: #38bdf8; }
+        .cat-5  { background: rgba(167,139,250,0.1); color: #a78bfa; }
+        .cat-6  { background: rgba(52,211,153,0.1);  color: #34d399; }
+        .cat-7  { background: rgba(248,113,113,0.1); color: #f87171; }
+        .cat-8  { background: rgba(253,186,116,0.1); color: #fda468; }
+        .cat-9  { background: rgba(94,234,212,0.1);  color: #5eead4; }
+        .cat-10 { background: rgba(196,181,253,0.1); color: #c4b5fd; }
+        .cat-11 { background: rgba(134,239,172,0.1); color: #86efac; }
+        .cat-12 { background: rgba(253,224,71,0.1);  color: #fde047; }
+        .cat-13 { background: rgba(147,197,253,0.1); color: #93c5fd; }
+        .cat-14 { background: rgba(249,168,212,0.1); color: #f9a8d4; }
+
+        /* Fade-in animation */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-up { animation: fadeUp 0.4s ease forwards; }
+
+        /* Preview section */
+        .preview-panel {
+            display: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-top: 1.5rem;
+        }
+
+        .preview-panel.visible { display: block; }
+
+        .preview-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview-head-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--muted2);
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+        }
+
+        .preview-tag {
+            font-size: 0.72rem;
+            color: var(--muted);
+            background: var(--surface2);
+            padding: 0.2rem 0.6rem;
+            border-radius: 5px;
+        }
+
+        .preview-scroll {
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .preview-scroll table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            font-size: 0.68rem;
+        }
+
+        .preview-scroll table tbody td {
+            font-size: 0.78rem;
+            padding: 0.6rem 1.25rem;
+            color: var(--muted2);
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- NAV -->
+    <nav>
+        <div class="logo">fin<span>lens</span></div>
+        <div class="nav-pill">
+            <div class="dot"></div>
+            <span id="aiStatus">AI Classification Active</span>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <div class="hero fade-up">
+        <div class="hero-eyebrow">⚡ Powered by AI</div>
+        <h1>Drop any financial file.<br><em>Get instant clarity.</em></h1>
+        <p>Upload your bank statement, business expenses, or any transaction file — we'll automatically detect, classify, and surface insights.</p>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="upload-section fade-up">
+        <div class="upload-zone" id="uploadZone">
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+            <div class="upload-icon-wrap" id="uploadIcon">📂</div>
+            <h3>Drop your file here</h3>
+            <p>Or click to browse from your computer</p>
+            <div class="upload-types">
+                <span class="type-chip">Bank Statement</span>
+                <span class="type-chip">Business Expenses</span>
+                <span class="type-chip">Personal Finance</span>
+                <span class="type-chip">Any CSV / Excel</span>
+            </div>
+        </div>
+
+        <!-- File info strip -->
+        <div class="file-info" id="fileInfo">
+            <div class="file-icon">📄</div>
+            <div class="file-details">
+                <div class="file-name" id="fileName">—</div>
+                <div class="file-meta" id="fileMeta">—</div>
+            </div>
+            <div class="file-badge" id="fileTypeBadge">—</div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-panel" id="previewPanel">
+            <div class="preview-head">
+                <span class="preview-head-title">File Preview</span>
+                <span class="preview-tag" id="previewTag">0 rows</span>
+            </div>
+            <div class="preview-scroll">
+                <table id="previewTable">
+                    <thead id="previewHead"></thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-panel" id="controlsPanel">
+            <div class="control-group">
+                <span class="control-label">AI Classification</span>
+                <div class="toggle-wrap">
+                    <div class="toggle on" id="aiToggle"></div>
+                </div>
+            </div>
+            <div class="control-group">
+                <span class="control-label">Confidence</span>
+                <input type="range" id="threshold" min="0.3" max="0.95" step="0.05" value="0.60">
+                <span class="threshold-val" id="thresholdVal">0.60</span>
+            </div>
+            <div class="controls-spacer"></div>
+        </div>
+
+        <!-- Classify CTA -->
+        <button class="classify-btn" id="classifyBtn" disabled>
+            <div class="spinner"></div>
+            <span class="btn-text">Analyse & Classify</span>
+            <span id="btnArrow">→</span>
+        </button>
+
+        <!-- Progress Bar -->
+        <div id="progressArea" style="display:none; margin-top:1.25rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+                <span id="progressLabel" style="font-size:0.82rem;color:var(--muted2);font-weight:500;">Classifying transactions…</span>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span id="progressPct" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;color:var(--accent);">0%</span>
+                    <span id="progressEta" style="font-size:0.75rem;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0.2rem 0.6rem;">Estimating…</span>
+                </div>
+            </div>
+            <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
+                <div id="progressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#818cf8);border-radius:3px;transition:width 0.4s ease;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:0.4rem;">
+                <span id="progressSub" style="font-size:0.72rem;color:var(--muted);">Starting up…</span>
+                <span id="progressCount" style="font-size:0.72rem;color:var(--muted);"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="resultsArea">
+        <div class="results-header">
+            <div class="results-title">Results</div>
+            <a class="download-btn" id="downloadBtn" href="#" onclick="downloadResults(event)">
+                ⬇ Download CSV
+            </a>
+        </div>
+
+        <!-- Stats Row 1 -->
+        <div class="stat-row fade-up">
+            <div class="stat-card">
+                <span class="stat-icon">📊</span>
+                <div class="stat-num" id="statTotal">—</div>
+                <div class="stat-label">Total Transactions</div>
+            </div>
+            <div class="stat-card teal">
+                <span class="stat-icon">💰</span>
+                <div class="stat-num" id="statTotalSpend">—</div>
+                <div class="stat-label">Total Spend</div>
+                <div class="stat-sub" id="statSpendSub"></div>
+            </div>
+            <div class="stat-card blue">
+                <span class="stat-icon">📐</span>
+                <div class="stat-num" id="statAvg">—</div>
+                <div class="stat-label">Avg Transaction</div>
+                <div class="stat-sub" id="statAvgSub"></div>
+            </div>
+        </div>
+        <!-- Stats Row 2 -->
+        <div class="stat-row-2 fade-up">
+            <div class="stat-card green">
+                <span class="stat-icon">✅</span>
+                <div class="stat-num" id="statHigh">—</div>
+                <div class="stat-label">Auto-Classified</div>
+                <div class="stat-sub" id="statHighPct"></div>
+            </div>
+            <div class="stat-card amber">
+                <span class="stat-icon">🔍</span>
+                <div class="stat-num" id="statReview">—</div>
+                <div class="stat-label">Needs Review</div>
+                <div class="conf-dist" id="confDist"></div>
+            </div>
+            <div class="stat-card purple">
+                <span class="stat-icon">🏷️</span>
+                <div class="stat-num" id="statCategories">—</div>
+                <div class="stat-label">Categories Used</div>
+                <div class="stat-sub" id="statTopCat"></div>
+            </div>
+        </div>
+
+        <!-- AI Insights -->
+        <div class="insights-grid fade-up" id="insightsGrid" style="display:none">
+        </div>
+
+        <!-- Breakdown grid -->
+        <div class="breakdown-grid">
+            <div class="panel fade-up">
+                <div class="panel-title">Spending by Category</div>
+                <div id="categoryBars"></div>
+            </div>
+            <div class="panel fade-up">
+                <div class="panel-title">Classification Breakdown</div>
+                <div style="margin-bottom:1.25rem">
+                    <div class="donut-wrap" id="donutWrap">
+                        <svg class="donut-svg" id="donutChart" width="120" height="120" viewBox="0 0 120 120"></svg>
+                        <div class="donut-legend" id="donutLegend"></div>
+                    </div>
+                </div>
+                <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:0.5rem">
+                    <div class="panel-title" style="margin-bottom:0.75rem">Method Breakdown</div>
+                    <div class="method-breakdown" id="methodBreakdown"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-panel fade-up">
+            <div class="table-header">
+                <div class="table-title">All Transactions</div>
+                <div class="table-count" id="tableCount"></div>
+            </div>
+            <div style="padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border);">
+                <div class="filter-bar">
+                    <button class="filter-btn active" data-filter="all" onclick="filterTable('all',this)">All</button>
+                    <button class="filter-btn" data-filter="Approved" onclick="filterTable('Approved',this)">✅ Approved</button>
+                    <button class="filter-btn" data-filter="Needs Review" onclick="filterTable('Needs Review',this)">🔍 Needs Review</button>
+                    <button class="filter-btn" data-filter="ai" onclick="filterTable('ai',this)">🤖 AI Classified</button>
+                    <button class="filter-btn" data-filter="keyword" onclick="filterTable('keyword',this)">🔑 Keyword Match</button>
+                    <div class="filter-spacer"></div>
+                    <input class="search-input" id="searchInput" type="text" placeholder="Search transactions..." oninput="searchTable(this.value)">
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Category</th>
+                            <th>Confidence</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:5000/api';
+
+let state = {
+    fileUploaded: false,
+    aiEnabled: true,
+    threshold: 0.60,
+    categoryColorMap: {},
+    colorIdx: 0,
+    allResults: [],
+    filteredResults: [],
+    currentFilter: 'all',
+    searchQuery: '',
+    masterLoaded: false,
+    transactionsLoaded: false,
+    lastRowCount: 100
+};
+
+async function forceUseAsTransactions(e) {
+    e.preventDefault();
+    // Re-upload the same file as a transactions file by hitting a special endpoint
+    const res = await fetch(`${API}/force-transactions`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+        state.fileUploaded = true;
+        state.transactionsLoaded = true;
+        state.lastRowCount = data.total_rows || 100;
+        document.getElementById('classifyBtn').disabled = false;
+        document.getElementById('controlsPanel').classList.add('visible');
+        const fn = document.getElementById('forceClassifyNote');
+        if (fn) fn.remove();
+        toast(`Treating file as transactions — ${data.total_rows} rows`, 'success');
+    } else {
+        toast(data.error || 'Failed', 'error');
+    }
+}
+
+// ─── Upload Zone ───────────────────────────────────────────────
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+
+uploadZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    uploadZone.classList.add('drag-over');
+});
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) processFile(f);
+});
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) processFile(fileInput.files[0]);
+});
+
+async function processFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    uploadZone.classList.add('has-file');
+    document.getElementById('uploadIcon').textContent = '⏳';
+
+    try {
+        const res = await fetch(`${API}/upload`, { method: 'POST', body: formData });
+
+        // Guard against non-JSON responses
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            const txt = await res.text();
+            throw new Error('Server error: ' + txt.slice(0, 200));
+        }
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Upload failed');
+
+        // ── Category master mode ───────────────────────────────────
+        if (data.file_mode === 'category_master') {
+            document.getElementById('fileInfo').classList.add('visible');
+            document.getElementById('fileName').textContent = data.filename;
+            document.getElementById('fileMeta').textContent =
+                `${data.total_rows.toLocaleString()} rows · ${data.categories_loaded} categories extracted`;
+            document.getElementById('fileTypeBadge').textContent = 'Category Master';
+            document.getElementById('fileTypeBadge').style.background = 'rgba(129,140,248,0.12)';
+            document.getElementById('fileTypeBadge').style.color = '#818cf8';
+            document.getElementById('fileTypeBadge').style.borderColor = 'rgba(129,140,248,0.3)';
+
+            renderPreview(data.columns, data.preview, data.total_rows);
+            document.getElementById('uploadIcon').textContent = '📋';
+
+            // Show a prompt to now upload the transactions file
+            showMasterLoadedBanner(data.categories_loaded, data.categories_sample);
+
+            // Keep classify button disabled until a transactions file is also loaded
+            state.masterLoaded = true;
+            // Check if we already have a transactions file loaded from before
+            if (state.transactionsLoaded) {
+                document.getElementById('classifyBtn').disabled = false;
+                document.getElementById('controlsPanel').classList.add('visible');
+            } else {
+                document.getElementById('classifyBtn').disabled = true;
+            }
+            state.fileUploaded = state.transactionsLoaded || false;
+            // Show a "force classify" option in case user wants to use this as transactions
+            const existingForce = document.getElementById('forceClassifyNote');
+            if (!existingForce && !state.transactionsLoaded) {
+                const note = document.createElement('div');
+                note.id = 'forceClassifyNote';
+                note.style.cssText = 'margin-top:0.75rem;font-size:0.78rem;color:var(--muted);text-align:center;';
+                note.innerHTML = 'Uploaded as <strong style="color:var(--accent2)">Category Master</strong>. Now upload your transactions file — or <a href="#" style="color:var(--accent);text-decoration:none;" onclick="forceUseAsTransactions(event)">treat this file as transactions instead</a>.';
+                document.getElementById('classifyBtn').after(note);
+            }
+
+            toast(`Category master loaded — ${data.categories_loaded} categories. Now upload your transactions file.`, 'success');
+            return;
+        }
+
+        // ── Transactions mode ──────────────────────────────────────
+        document.getElementById('fileInfo').classList.add('visible');
+        document.getElementById('fileName').textContent = data.filename;
+        document.getElementById('fileMeta').textContent =
+            `${data.total_rows.toLocaleString()} rows · ${data.columns.length} columns`;
+
+        const typeLabels = {
+            bank_statement: 'Bank Statement',
+            business_transactions: 'Business Transactions',
+            expense_report: 'Expense Report',
+            financial_data: 'Financial Data'
+        };
+        const badge = document.getElementById('fileTypeBadge');
+        badge.textContent = typeLabels[data.file_type] || data.file_type;
+        badge.style = ''; // reset any master styling
+
+        renderPreview(data.columns, data.preview, data.total_rows);
+
+        // Hide any master banner
+        const banner = document.getElementById('masterBanner');
+        if (banner) banner.remove();
+
+        // Show controls
+        document.getElementById('controlsPanel').classList.add('visible');
+        document.getElementById('classifyBtn').disabled = false;
+        document.getElementById('uploadIcon').textContent = '✅';
+
+        state.fileUploaded = true;
+        state.transactionsLoaded = true;
+        state.lastRowCount = data.total_rows;
+
+        // Remove any force-classify note if showing
+        const fn = document.getElementById('forceClassifyNote');
+        if (fn) fn.remove();
+
+        const hasMaster = data.has_category_master;
+        toast(
+            hasMaster
+                ? `Loaded ${data.total_rows.toLocaleString()} transactions — using your custom categories ✓`
+                : `Loaded ${data.total_rows.toLocaleString()} rows — auto-categories ready`,
+            'success'
+        );
+
+    } catch (err) {
+        document.getElementById('uploadIcon').textContent = '📂';
+        uploadZone.classList.remove('has-file');
+        toast(err.message, 'error');
+    }
+}
+
+function showMasterLoadedBanner(count, sample) {
+    // Remove old banner
+    const old = document.getElementById('masterBanner');
+    if (old) old.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'masterBanner';
+    banner.style.cssText = `
+        background: rgba(129,140,248,0.07);
+        border: 1px solid rgba(129,140,248,0.25);
+        border-radius: 14px;
+        padding: 1.25rem 1.5rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+    `;
+
+    const chips = (sample || []).slice(0, 8).map(c =>
+        `<span style="font-size:0.72rem;background:rgba(129,140,248,0.12);color:#818cf8;border:1px solid rgba(129,140,248,0.25);border-radius:5px;padding:0.2rem 0.6rem;">${c}</span>`
+    ).join('');
+
+    banner.innerHTML = `
+        <span style="font-size:1.5rem;flex-shrink:0">📋</span>
+        <div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:white;margin-bottom:0.35rem;">
+                Category master loaded — ${count} accounts
+            </div>
+            <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:0.75rem;">
+                Now drop your transactions file and we'll map them to your custom chart of accounts.
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">${chips}${count > 8 ? `<span style="font-size:0.72rem;color:#64748b">+${count - 8} more</span>` : ''}</div>
+        </div>`;
+
+    document.getElementById('previewPanel').after(banner);
+}
+
+function renderPreview(columns, rows, total) {
+    const panel = document.getElementById('previewPanel');
+    const head = document.getElementById('previewHead');
+    const body = document.getElementById('previewBody');
+
+    head.innerHTML = '<tr>' + columns.map(c => `<th>${c}</th>`).join('') + '</tr>';
+    body.innerHTML = rows.map(row =>
+        '<tr>' + columns.map(c => `<td>${row[c] ?? ''}</td>`).join('') + '</tr>'
+    ).join('');
+
+    document.getElementById('previewTag').textContent = `showing 5 of ${total.toLocaleString()} rows`;
+    panel.classList.add('visible');
+}
+
+// ─── Controls ──────────────────────────────────────────────────
+const aiToggle = document.getElementById('aiToggle');
+aiToggle.addEventListener('click', () => {
+    state.aiEnabled = !state.aiEnabled;
+    aiToggle.classList.toggle('on', state.aiEnabled);
+});
+
+const thresholdInput = document.getElementById('threshold');
+const thresholdVal   = document.getElementById('thresholdVal');
+thresholdInput.addEventListener('input', () => {
+    state.threshold = parseFloat(thresholdInput.value);
+    thresholdVal.textContent = state.threshold.toFixed(2);
+});
+
+// ─── Classify ──────────────────────────────────────────────────
+const classifyBtn = document.getElementById('classifyBtn');
+classifyBtn.addEventListener('click', runClassification);
+
+// ─── Progress simulation (evidence-based timing) ──────────────
+let progressInterval = null;
+let _sseSource = null;  // active EventSource, if any
+
+// ---------------------------------------------------------------------------
+// Timing helpers (kept for the /api/timing POST after completion)
+// ---------------------------------------------------------------------------
+async function _reportTiming(rows, elapsedSec, mode) {
+    try {
+        await fetch(`${API}/timing`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows, elapsed_sec: elapsedSec, mode })
+        });
+    } catch (_) { /* ignore */ }
+}
+
+function _formatEta(remainingSec) {
+    if (remainingSec > 3600) {
+        const h = Math.ceil(remainingSec / 3600);
+        return `~${h}h remaining`;
+    } else if (remainingSec > 60) {
+        const m = Math.floor(remainingSec / 60);
+        const s = Math.round(remainingSec % 60);
+        return s > 0 ? `~${m}m ${s}s remaining` : `~${m}m remaining`;
+    } else if (remainingSec > 5) {
+        return `~${Math.ceil(remainingSec)}s remaining`;
+    }
+    return 'Finishing up…';
+}
+
+// ---------------------------------------------------------------------------
+// UI helpers
+// ---------------------------------------------------------------------------
+function _progressEls() {
+    return {
+        area: document.getElementById('progressArea'),
+        bar:  document.getElementById('progressBar'),
+        pct:  document.getElementById('progressPct'),
+        eta:  document.getElementById('progressEta'),
+        sub:  document.getElementById('progressSub'),
+        cnt:  document.getElementById('progressCount'),
+        lbl:  document.getElementById('progressLabel'),
+    };
+}
+
+function _setProgress(fraction, processed, total, label, sub, eta) {
+    const { bar, pct, cnt, lbl, sub: subEl, eta: etaEl } = _progressEls();
+    const pctVal = Math.round(fraction * 100);
+    bar.style.width = pctVal + '%';
+    pct.textContent = pctVal + '%';
+    if (label !== undefined) lbl.textContent = label;
+    if (sub   !== undefined) subEl.textContent = sub;
+    if (eta   !== undefined) etaEl.textContent = eta;
+    if (processed !== undefined && total !== undefined) {
+        cnt.textContent = `${processed.toLocaleString('en-IN')} / ${total.toLocaleString('en-IN')} transactions`;
+    }
+}
+
+function _showProgressArea() {
+    const { area, bar, pct, eta, sub, cnt, lbl } = _progressEls();
+    area.style.display = 'block';
+    bar.style.width = '0%';
+    pct.textContent = '0%';
+    eta.textContent = 'Starting…';
+    sub.textContent = 'Connecting…';
+    lbl.textContent = 'Classifying transactions…';
+    cnt.textContent = '';
+}
+
+function finishProgress() {
+    clearInterval(progressInterval);
+    if (_sseSource) { _sseSource.close(); _sseSource = null; }
+    const { bar, pct, eta, lbl, sub, area } = _progressEls();
+    bar.style.width = '100%';
+    pct.textContent = '100%';
+    eta.textContent = 'Done ✓';
+    lbl.textContent = 'Classification complete!';
+    sub.textContent = '';
+    setTimeout(() => { area.style.display = 'none'; }, 2000);
+}
+
+// ---------------------------------------------------------------------------
+// Main classification runner — uses SSE for real progress
+// ---------------------------------------------------------------------------
+async function runClassification() {
+    if (!state.fileUploaded) return;
+
+    classifyBtn.classList.add('loading');
+    classifyBtn.querySelector('.btn-text').textContent = 'Classifying…';
+    document.getElementById('btnArrow').style.display = 'none';
+    classifyBtn.disabled = true;
+
+    _showProgressArea();
+
+    const mode      = state.aiEnabled ? 'ai' : 'keyword';
+    const runStart  = Date.now();
+    let   totalRows = state.lastRowCount || 0;
+    let   aiCount   = 0;
+    let   kwCount   = 0;
+
+    // Close any previous SSE connection
+    if (_sseSource) { _sseSource.close(); _sseSource = null; }
+
+    const params = new URLSearchParams({
+        use_ai: state.aiEnabled,
+        confidence_threshold: state.threshold,
+    });
+
+    return new Promise((resolve) => {
+        const src = new EventSource(`${API}/classify-stream?${params}`);
+        _sseSource = src;
+
+        src.onmessage = (e) => {
+            let msg;
+            try { msg = JSON.parse(e.data); } catch { return; }
+
+            if (msg.type === 'start') {
+                totalRows = msg.total;
+                _setProgress(0, 0, totalRows, 'Classifying transactions…', 'Starting up…', 'Calculating…');
+                return;
+            }
+
+            if (msg.type === 'progress') {
+                const processed = msg.processed;
+                const total     = msg.total || totalRows;
+                const fraction  = total > 0 ? processed / total : 0;
+
+                // Elapsed + ETA
+                const elapsedSec  = (Date.now() - runStart) / 1000;
+                const rowsLeft    = total - processed;
+                const secPerRow   = processed > 0 ? elapsedSec / processed : 0;
+                const remainingSec = secPerRow * rowsLeft;
+
+                // Method counters for sub-label
+                if (msg.method === 'ai')      aiCount++;
+                else if (msg.method === 'keyword') kwCount++;
+
+                const sub = state.aiEnabled
+                    ? `AI: ${aiCount} · Keyword: ${kwCount}`
+                    : `Keyword matched: ${kwCount}`;
+
+                const label = fraction < 0.05 ? 'Preprocessing…'
+                            : fraction < 0.15 ? 'Running keyword matching…'
+                            : fraction < 0.90 ? (state.aiEnabled ? 'AI classifying…' : 'Keyword classifying…')
+                            : 'Finalising results…';
+
+                const etaText = processed < 3 ? 'Calculating…' : _formatEta(remainingSec);
+
+                _setProgress(fraction, processed, total, label, sub, etaText);
+                return;
+            }
+
+            if (msg.type === 'done') {
+                src.close(); _sseSource = null;
+
+                const elapsedSec = (Date.now() - runStart) / 1000;
+                finishProgress();
+
+                state.allResults  = msg.results;
+                state.lastRowCount = msg.stats.total;
+                renderResults(msg.results, msg.stats);
+                _reportTiming(msg.stats.total, elapsedSec, mode);
+
+                setTimeout(() => {
+                    document.getElementById('resultsArea').classList.add('visible');
+                    document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+
+                toast(`✓ Classified ${msg.stats.total.toLocaleString('en-IN')} transactions`, 'success');
+
+                classifyBtn.classList.remove('loading');
+                classifyBtn.querySelector('.btn-text').textContent = 'Re-Analyse';
+                document.getElementById('btnArrow').style.display = '';
+                classifyBtn.disabled = false;
+                resolve();
+                return;
+            }
+
+            if (msg.type === 'error') {
+                src.close(); _sseSource = null;
+                clearInterval(progressInterval);
+                document.getElementById('progressArea').style.display = 'none';
+                toast(msg.error || 'Classification failed', 'error');
+                classifyBtn.classList.remove('loading');
+                classifyBtn.querySelector('.btn-text').textContent = 'Re-Analyse';
+                document.getElementById('btnArrow').style.display = '';
+                classifyBtn.disabled = false;
+                resolve();
+                return;
+            }
+        };
+
+        src.onerror = () => {
+            src.close(); _sseSource = null;
+            document.getElementById('progressArea').style.display = 'none';
+            toast('Connection to server lost during classification', 'error');
+            classifyBtn.classList.remove('loading');
+            classifyBtn.querySelector('.btn-text').textContent = 'Re-Analyse';
+            document.getElementById('btnArrow').style.display = '';
+            classifyBtn.disabled = false;
+            resolve();
+        };
+    });
+}
+
+// ─── Render Results ────────────────────────────────────────────
+function getCatClass(category) {
+    if (!(category in state.categoryColorMap)) {
+        state.categoryColorMap[category] = `cat-${state.colorIdx % 15}`;
+        state.colorIdx++;
+    }
+    return state.categoryColorMap[category];
+}
+
+function fmtAmount(val) {
+    if (val == null || isNaN(val)) return '—';
+    if (val >= 10000000) return `₹${(val/10000000).toFixed(2)}Cr`;
+    if (val >= 100000)   return `₹${(val/100000).toFixed(2)}L`;
+    if (val >= 1000)     return `₹${(val/1000).toFixed(1)}K`;
+    return `₹${Math.round(val).toLocaleString('en-IN')}`;
+}
+
+function drawDonut(data, svgEl, legendEl) {
+    const colors = ['#6ee7b7','#818cf8','#fbbf24','#fb7185','#38bdf8','#a78bfa','#34d399','#fda468','#5eead4','#c4b5fd'];
+    const total = data.reduce((s, d) => s + d.val, 0);
+    const R = 40, cx = 60, cy = 60, strokeW = 18;
+    const circumference = 2 * Math.PI * R;
+    let offset = 0;
+
+    svgEl.innerHTML = '';
+    // Background circle
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    bg.setAttribute('cx', cx); bg.setAttribute('cy', cy); bg.setAttribute('r', R);
+    bg.setAttribute('fill', 'none'); bg.setAttribute('stroke', '#1a1e2b'); bg.setAttribute('stroke-width', strokeW);
+    svgEl.appendChild(bg);
+
+    legendEl.innerHTML = '';
+    data.slice(0, 6).forEach((d, i) => {
+        const pct = d.val / total;
+        const dash = pct * circumference;
+        const gap = circumference - dash;
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', cx); circle.setAttribute('cy', cy); circle.setAttribute('r', R);
+        circle.setAttribute('fill', 'none');
+        circle.setAttribute('stroke', colors[i % colors.length]);
+        circle.setAttribute('stroke-width', strokeW);
+        circle.setAttribute('stroke-dasharray', `${dash} ${gap}`);
+        circle.setAttribute('stroke-dashoffset', -offset * circumference);
+        circle.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+        circle.style.transition = 'stroke-dasharray 0.6s ease';
+        svgEl.appendChild(circle);
+        offset += pct;
+
+        legendEl.innerHTML += `<div class="donut-legend-item">
+            <div class="donut-legend-dot" style="background:${colors[i % colors.length]}"></div>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px">${d.label}</span>
+            <span class="donut-legend-pct">${Math.round(pct*100)}%</span>
+        </div>`;
+    });
+
+    // Center label
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', cx); text.setAttribute('y', cy - 4);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('fill', '#e2e8f0');
+    text.setAttribute('font-size', '11');
+    text.setAttribute('font-family', 'Syne, sans-serif');
+    text.setAttribute('font-weight', '700');
+    text.textContent = fmtAmount(total);
+    svgEl.appendChild(text);
+
+    const sub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    sub.setAttribute('x', cx); sub.setAttribute('y', cy + 10);
+    sub.setAttribute('text-anchor', 'middle');
+    sub.setAttribute('fill', '#64748b');
+    sub.setAttribute('font-size', '8');
+    sub.textContent = 'total';
+    svgEl.appendChild(sub);
+}
+
+function renderResults(results, stats) {
+    state.filteredResults = results;
+    state.currentFilter = 'all';
+
+    // ── Row 1 stats ──
+    document.getElementById('statTotal').textContent = stats.total.toLocaleString();
+
+    // Compute total spend from results
+    let totalSpend = 0, txCount = 0;
+    results.forEach(r => {
+        const a = parseFloat(r.Amount);
+        if (!isNaN(a) && a > 0) { totalSpend += a; txCount++; }
+    });
+    document.getElementById('statTotalSpend').textContent = fmtAmount(totalSpend);
+    document.getElementById('statSpendSub').textContent = `across ${txCount} paid txns`;
+
+    const avg = txCount > 0 ? totalSpend / txCount : 0;
+    document.getElementById('statAvg').textContent = fmtAmount(avg);
+    document.getElementById('statAvgSub').textContent = `median per transaction`;
+
+    // ── Row 2 stats ──
+    const highPct = stats.total > 0 ? Math.round(stats.high_confidence / stats.total * 100) : 0;
+    document.getElementById('statHigh').textContent = stats.high_confidence.toLocaleString();
+    document.getElementById('statHighPct').textContent = `${highPct}% classified automatically`;
+
+    document.getElementById('statReview').textContent = stats.needs_review.toLocaleString();
+
+    // Confidence distribution bar
+    const confBins = [0, 0, 0]; // [low <0.6, mid 0.6-0.8, high >0.8]
+    results.forEach(r => {
+        const c = parseFloat(r.Confidence) || 0;
+        if (c >= 0.8) confBins[2]++;
+        else if (c >= 0.6) confBins[1]++;
+        else confBins[0]++;
+    });
+    const confTotal = results.length || 1;
+    document.getElementById('confDist').innerHTML = [
+        { color: '#f87171', val: confBins[0] },
+        { color: '#fbbf24', val: confBins[1] },
+        { color: '#34d399', val: confBins[2] }
+    ].map(b => `<div class="conf-dist-seg" style="width:${b.val/confTotal*100}%;background:${b.color}"></div>`).join('');
+
+    const catCount = Object.keys(stats.category_counts).length;
+    document.getElementById('statCategories').textContent = catCount;
+    const topCat = Object.entries(stats.category_counts).sort((a,b)=>b[1]-a[1])[0];
+    document.getElementById('statTopCat').textContent = topCat ? `Top: ${topCat[0]}` : '';
+
+    // ── Insights ──
+    const insightsGrid = document.getElementById('insightsGrid');
+    const insights = [];
+    if (stats.needs_review > 0) {
+        const reviewPct = Math.round(stats.needs_review / stats.total * 100);
+        insights.push({ icon: '🔍', text: `<strong>${stats.needs_review} transactions (${reviewPct}%)</strong> need manual review — low confidence classification.` });
+    }
+    if (stats.ai_classified > 0) {
+        insights.push({ icon: '🤖', text: `<strong>AI classified ${stats.ai_classified} transactions</strong> that keyword matching couldn't handle.` });
+    }
+    const topSpend = Object.entries(stats.category_totals).sort((a,b)=>b[1]-a[1])[0];
+    if (topSpend) {
+        insights.push({ icon: '📈', text: `Largest spend category: <strong>${topSpend[0]}</strong> at <strong>${fmtAmount(topSpend[1])}</strong>.` });
+    }
+    const unmatched = stats.total - stats.ai_classified - stats.keyword_classified;
+    if (unmatched > 0) {
+        insights.push({ icon: '⚠️', text: `<strong>${unmatched} transactions</strong> fell back to default — consider adding keywords for better coverage.` });
+    }
+
+    if (insights.length > 0) {
+        insightsGrid.style.display = 'grid';
+        insightsGrid.innerHTML = insights.map(i => `
+            <div class="insight-item">
+                <span class="insight-icon">${i.icon}</span>
+                <div class="insight-text">${i.text}</div>
+            </div>`).join('');
+    }
+
+    // ── Category bars ──
+    const barsEl = document.getElementById('categoryBars');
+    barsEl.innerHTML = '';
+    const totals = stats.category_totals;
+    const maxVal = Math.max(...Object.values(totals), 1);
+
+    Object.entries(totals).slice(0, 10).forEach(([cat, val]) => {
+        const pct = (val / maxVal) * 100;
+        barsEl.innerHTML += `
+            <div class="bar-row">
+                <span class="bar-label">${cat}</span>
+                <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+                <span class="bar-val">${fmtAmount(val)}</span>
+            </div>`;
+    });
+
+    // ── Donut chart ──
+    const donutData = Object.entries(totals).slice(0, 6).map(([k, v]) => ({ label: k, val: v }));
+    if (donutData.length > 0) {
+        drawDonut(donutData, document.getElementById('donutChart'), document.getElementById('donutLegend'));
+    }
+
+    // ── Method breakdown ──
+    const methodEl = document.getElementById('methodBreakdown');
+    const unclassified = Math.max(0, stats.total - stats.ai_classified - stats.keyword_classified);
+    const methods = [
+        { label: '🤖 AI Classification',  color: '#818cf8', count: stats.ai_classified },
+        { label: '🔑 Keyword Match',       color: '#6ee7b7', count: stats.keyword_classified },
+        { label: '⚠️ Unclassified',        color: '#f87171', count: unclassified }
+    ].filter(m => m.count > 0);
+
+    methodEl.innerHTML = methods.map(m => `
+        <div class="method-row">
+            <div class="method-left">
+                <div class="method-dot" style="background:${m.color}"></div>
+                <span class="method-name">${m.label}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+                <span style="font-size:0.7rem;color:var(--muted)">${Math.round(m.count/stats.total*100)}%</span>
+                <span class="method-count">${m.count.toLocaleString()}</span>
+            </div>
+        </div>`).join('');
+
+    // ── Table ──
+    // Reset filter to "all" when new results load
+    state.currentFilter = 'all';
+    state.searchQuery = '';
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    const allBtn = document.querySelector('.filter-btn[data-filter="all"]');
+    if (allBtn) allBtn.classList.add('active');
+    const searchEl = document.getElementById('searchInput');
+    if (searchEl) searchEl.value = '';
+    renderTable(results);
+}
+
+function renderTable(results) {
+    const tbody = document.getElementById('resultsTableBody');
+    const display = results.slice(0, 500);
+    tbody.innerHTML = '';
+
+    display.forEach(row => {
+        const conf = parseFloat(row.Confidence) || 0;
+        const confPct = Math.round(conf * 100);
+        const confColor = conf >= 0.80 ? '#34d399' : conf >= 0.60 ? '#fbbf24' : '#f87171';
+        const catClass = getCatClass(row.Category || 'Other');
+
+        let statusClass, statusLabel;
+        if (row.Status === 'Approved') {
+            statusClass = 'status-approved'; statusLabel = '✓ Approved';
+        } else if (conf < 0.4) {
+            statusClass = 'status-low'; statusLabel = '⚠ Low Confidence';
+        } else {
+            statusClass = 'status-review'; statusLabel = '🔍 Review';
+        }
+
+        const methodLabel = row.Method === 'ai' ? '🤖 AI' : row.Method === 'keyword' ? '🔑 KW' : '—';
+        const methodColor = row.Method === 'ai' ? '#818cf8' : row.Method === 'keyword' ? '#6ee7b7' : '#64748b';
+
+        const dateKey = Object.keys(row).find(k => k.toLowerCase().includes('date')) || '';
+        const descKey = Object.keys(row).find(k => ['description','narration','desc','particulars','details','merchant'].includes(k.toLowerCase())) || Object.keys(row)[0];
+        const amtKey  = Object.keys(row).find(k => k.toLowerCase() === 'amount') || '';
+
+        const dateVal = dateKey ? (row[dateKey] || '—') : '—';
+        const descVal = descKey ? (row[descKey] || '—') : '—';
+        const rawAmt  = amtKey && row[amtKey] != null ? parseFloat(row[amtKey]) : NaN;
+        const amtVal  = !isNaN(rawAmt)
+            ? `₹${rawAmt.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}`
+            : '—';
+
+        tbody.innerHTML += `
+            <tr data-status="${row.Status}" data-method="${row.Method || ''}">
+                <td style="color:var(--muted2);font-size:0.78rem;white-space:nowrap">${dateVal}</td>
+                <td class="td-desc" title="${descVal}">${descVal}</td>
+                <td class="td-amount">${amtVal}</td>
+                <td><span class="cat-badge ${catClass}">${row.Category || 'Other'}</span></td>
+                <td>
+                    <div class="conf-bar-wrap">
+                        <div class="conf-mini"><div class="conf-mini-fill" style="width:${confPct}%;background:${confColor}"></div></div>
+                        <span class="conf-pct" style="color:${confColor}">${confPct}%</span>
+                    </div>
+                </td>
+                <td><span style="font-size:0.72rem;font-weight:600;color:${methodColor}">${methodLabel}</span></td>
+                <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+            </tr>`;
+    });
+
+    document.getElementById('tableCount').textContent =
+        display.length < results.length
+            ? `Showing ${display.length} of ${results.length.toLocaleString()}`
+            : `${results.length.toLocaleString()} total`;
+}
+
+// ─── Filters ───────────────────────────────────────────────────
+function filterTable(filter, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.currentFilter = filter;
+    applyFilters();
+}
+
+function searchTable(query) {
+    state.searchQuery = query.toLowerCase();
+    applyFilters();
+}
+
+function applyFilters() {
+    let filtered = state.allResults || [];
+    const filter = state.currentFilter || 'all';
+    const q = state.searchQuery || '';
+
+    if (filter === 'Approved') filtered = filtered.filter(r => r.Status === 'Approved');
+    else if (filter === 'Needs Review') filtered = filtered.filter(r => r.Status !== 'Approved');
+    else if (filter === 'ai') filtered = filtered.filter(r => r.Method === 'ai');
+    else if (filter === 'keyword') filtered = filtered.filter(r => r.Method === 'keyword');
+
+    if (q) {
+        filtered = filtered.filter(r => {
+            const descKey = Object.keys(r).find(k => ['description','narration','desc','particulars'].includes(k.toLowerCase())) || '';
+            const desc = descKey ? (r[descKey] || '') : '';
+            return desc.toLowerCase().includes(q) || (r.Category || '').toLowerCase().includes(q);
+        });
+    }
+
+    renderTable(filtered);
+    document.getElementById('tableCount').textContent = `${filtered.length.toLocaleString()} of ${(state.allResults||[]).length.toLocaleString()} transactions`;
+}
+
+// ─── Download ──────────────────────────────────────────────────
+function downloadResults(e) {
+    e.preventDefault();
+    window.location.href = `${API}/download-results`;
+}
+
+// ─── Toast ─────────────────────────────────────────────────────
+function toast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast ${type}`;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ─── Init ──────────────────────────────────────────────────────
+(async () => {
+    try {
+        const res = await fetch(`${API}/stats`);
+        const data = await res.json();
+        const providerLabel = {
+            'anthropic': 'Claude AI Active',
+            'groq': 'Groq AI Active',
+            'none': 'Keyword Mode'
+        }[data.ai_provider] || 'AI Active';
+        document.getElementById('aiStatus').textContent = providerLabel;
+    } catch (_) {}
+})();
+</script>
+</body>
+</html>
