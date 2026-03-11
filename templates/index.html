@@ -1156,6 +1156,207 @@
   <div id="historyList"><div style="color:#64748b;font-size:0.85rem;text-align:center;padding:2rem 0">Loading…</div></div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     CATEGORY MASTER FULL-PAGE OVERLAY
+════════════════════════════════════════════════════════════ -->
+<div id="masterPage" style="display:none;position:fixed;inset:0;background:#0c0e14;z-index:800;overflow-y:auto">
+  <div style="max-width:1200px;margin:0 auto;padding:2rem 1.5rem">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:white">
+          Chart of Accounts
+        </div>
+        <div style="color:#64748b;font-size:0.85rem;margin-top:0.25rem">
+          Define how bank transactions map to your expense categories
+        </div>
+      </div>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
+        <label style="padding:0.5rem 1rem;background:rgba(129,140,248,0.12);border:1px solid rgba(129,140,248,0.3);border-radius:8px;color:#a5b4fc;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:0.4rem">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload Excel
+          <input type="file" id="masterFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="uploadMasterFile(this)">
+        </label>
+        <button onclick="exportMaster()" style="padding:0.5rem 1rem;background:transparent;border:1px solid #1e2433;border-radius:8px;color:#94a3b8;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:0.4rem">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Export
+        </button>
+        <button onclick="showAddRowModal()" style="padding:0.5rem 1rem;background:#818cf8;border:none;border-radius:8px;color:white;font-family:'Syne',sans-serif;font-weight:600;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:0.4rem">
+          + Add Account
+        </button>
+        <button onclick="closeMasterPage()" style="padding:0.5rem 1rem;background:transparent;border:1px solid #1e2433;border-radius:8px;color:#64748b;font-size:0.8rem;cursor:pointer">
+          ✕ Close
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="masterEmptyState" style="display:none;text-align:center;padding:4rem 2rem;border:1px dashed #1e2433;border-radius:12px">
+      <div style="font-size:2.5rem;margin-bottom:1rem">📊</div>
+      <div style="color:white;font-weight:600;font-size:1.1rem;margin-bottom:0.5rem">No Chart of Accounts yet</div>
+      <div style="color:#64748b;font-size:0.85rem;margin-bottom:1.5rem;max-width:400px;margin-left:auto;margin-right:auto">
+        Upload your Excel chart of accounts, or add entries manually. The system will use these to classify your transactions.
+      </div>
+      <label style="padding:0.65rem 1.5rem;background:#818cf8;border-radius:8px;color:white;font-family:'Syne',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer;display:inline-block">
+        Upload Excel
+        <input type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="uploadMasterFile(this)">
+      </label>
+    </div>
+
+    <!-- Stats bar -->
+    <div id="masterStatsBar" style="display:none;display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+      <div style="background:#0f1117;border:1px solid #1e2433;border-radius:8px;padding:0.6rem 1rem;font-size:0.78rem">
+        <span style="color:#64748b">Total accounts</span>
+        <span id="masterStatTotal" style="color:white;font-family:'Syne',sans-serif;font-weight:700;margin-left:0.5rem">0</span>
+      </div>
+      <div style="background:#0f1117;border:1px solid #1e2433;border-radius:8px;padding:0.6rem 1rem;font-size:0.78rem">
+        <span style="color:#64748b">Expense accounts</span>
+        <span id="masterStatExpense" style="color:#f87171;font-family:'Syne',sans-serif;font-weight:700;margin-left:0.5rem">0</span>
+      </div>
+      <div style="background:#0f1117;border:1px solid #1e2433;border-radius:8px;padding:0.6rem 1rem;font-size:0.78rem">
+        <span style="color:#64748b">With keywords</span>
+        <span id="masterStatKeywords" style="color:#6ee7b7;font-family:'Syne',sans-serif;font-weight:700;margin-left:0.5rem">0</span>
+      </div>
+      <div style="background:#0f1117;border:1px solid #1e2433;border-radius:8px;padding:0.6rem 1rem;font-size:0.78rem">
+        <span style="color:#64748b">With GST</span>
+        <span id="masterStatGst" style="color:#fbbf24;font-family:'Syne',sans-serif;font-weight:700;margin-left:0.5rem">0</span>
+      </div>
+    </div>
+
+    <!-- Search + filter -->
+    <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
+      <input id="masterSearch" type="text" placeholder="Search accounts or keywords…"
+        oninput="filterMasterTable()"
+        style="flex:1;min-width:200px;padding:0.55rem 0.85rem;background:#0f1117;border:1px solid #1e2433;border-radius:8px;color:white;font-size:0.83rem;outline:none">
+      <select id="masterTypeFilter" onchange="filterMasterTable()"
+        style="padding:0.55rem 0.85rem;background:#0f1117;border:1px solid #1e2433;border-radius:8px;color:#94a3b8;font-size:0.83rem;outline:none">
+        <option value="">All types</option>
+        <option value="Expense">Expense</option>
+        <option value="Asset">Asset</option>
+        <option value="Liability">Liability</option>
+        <option value="Income">Income</option>
+        <option value="Equity">Equity</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto;border:1px solid #1e2433;border-radius:12px">
+      <table id="masterTable" style="width:100%;border-collapse:collapse;font-size:0.78rem">
+        <thead>
+          <tr style="background:#0f1117;border-bottom:1px solid #1e2433">
+            <th style="padding:0.75rem 0.85rem;text-align:left;color:#64748b;font-weight:600;white-space:nowrap">Code</th>
+            <th style="padding:0.75rem 0.85rem;text-align:left;color:#64748b;font-weight:600;white-space:nowrap">Account Name</th>
+            <th style="padding:0.75rem 0.85rem;text-align:left;color:#64748b;font-weight:600;white-space:nowrap">Type</th>
+            <th style="padding:0.75rem 0.85rem;text-align:left;color:#64748b;font-weight:600;white-space:nowrap">Sub-Group</th>
+            <th style="padding:0.75rem 0.85rem;text-align:left;color:#64748b;font-weight:600">Keywords (LLM)</th>
+            <th style="padding:0.75rem 0.85rem;text-align:center;color:#64748b;font-weight:600;white-space:nowrap">GST</th>
+            <th style="padding:0.75rem 0.85rem;text-align:center;color:#64748b;font-weight:600;white-space:nowrap">TDS</th>
+            <th style="padding:0.75rem 0.85rem;text-align:center;color:#64748b;font-weight:600;white-space:nowrap">Active</th>
+            <th style="padding:0.75rem 0.85rem;text-align:center;color:#64748b;font-weight:600">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="masterTableBody"></tbody>
+      </table>
+    </div>
+    <div id="masterTableCount" style="color:#64748b;font-size:0.75rem;margin-top:0.5rem;text-align:right"></div>
+  </div>
+</div>
+
+<!-- Edit/Add Row Modal -->
+<div id="masterRowModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+  <div style="background:#0f1117;border:1px solid #1e2433;border-radius:16px;padding:2rem;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;position:relative">
+    <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:white;margin-bottom:1.5rem" id="masterModalTitle">Add Account</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div>
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">Code</label>
+        <input id="mf_code" type="text" placeholder="e.g. 5230"
+          style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+      </div>
+      <div>
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">Account Name <span style="color:#f87171">*</span></label>
+        <input id="mf_account_name" type="text" placeholder="e.g. Software Subscriptions"
+          style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+      </div>
+      <div>
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">Type</label>
+        <select id="mf_type" style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+          <option value="">—</option>
+          <option>Expense</option><option>Asset</option><option>Liability</option>
+          <option>Income</option><option>Equity</option>
+        </select>
+      </div>
+      <div>
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">Sub-Group</label>
+        <input id="mf_sub_group" type="text" placeholder="e.g. Other expenses"
+          style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+      </div>
+      <div>
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">High-Level Classification</label>
+        <input id="mf_highlevel_classification" type="text" placeholder="e.g. 523x Software subscription"
+          style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+      </div>
+      <div>
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">Sch III Map</label>
+        <input id="mf_sch_iii_map" type="text" placeholder="e.g. Other expenses"
+          style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+      </div>
+      <div>
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">GST Flag</label>
+        <select id="mf_gst_flag" style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+          <option value="">—</option><option value="Y">Y</option><option value="N">N</option><option value="I">I (Import)</option>
+        </select>
+      </div>
+      <div>
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">TDS Section</label>
+        <input id="mf_tds_section" type="text" placeholder="e.g. 194J"
+          style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+      </div>
+      <div>
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">BOE Flag</label>
+        <select id="mf_boe_flag" style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+          <option value="">—</option><option value="Y">Y</option><option value="N">N</option>
+        </select>
+      </div>
+      <div>
+        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">Active</label>
+        <select id="mf_is_active" style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+          <option value="TRUE">Yes</option><option value="FALSE">No</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem">
+      <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">LLM Keywords <span style="color:#64748b;font-weight:400;text-transform:none">(comma separated)</span></label>
+      <input id="mf_llm_keywords" type="text" placeholder="e.g. GOOGLEWORKSP, CHATGPT, aws"
+        style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+    </div>
+    <div style="margin-top:1rem">
+      <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">Repeating Keywords</label>
+      <input id="mf_repeating_keywords" type="text" placeholder="e.g. GOOGLEWORKSP, CHATGPT"
+        style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+    </div>
+    <div style="margin-top:1rem">
+      <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">If Narration Contains (conditional)</label>
+      <input id="mf_if_narration_keyword" type="text" placeholder="classify ONLY if narration contains these keywords"
+        style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+    </div>
+    <div style="margin-top:1rem">
+      <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">If NOT Party Name (conditional exclusion)</label>
+      <input id="mf_if_not_party_name_keyword" type="text" placeholder="exclude if party name contains these"
+        style="width:100%;margin-top:0.3rem;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none">
+    </div>
+
+    <div id="masterRowError" style="display:none;color:#f87171;font-size:0.8rem;margin-top:1rem;padding:0.6rem 0.85rem;background:rgba(248,113,113,0.08);border-radius:6px"></div>
+
+    <div style="display:flex;gap:0.75rem;margin-top:1.5rem;justify-content:flex-end">
+      <button onclick="closeMasterRowModal()" style="padding:0.55rem 1.2rem;background:transparent;border:1px solid #1e2433;border-radius:8px;color:#64748b;font-size:0.85rem;cursor:pointer">Cancel</button>
+      <button id="masterRowSaveBtn" onclick="saveMasterRow()" style="padding:0.55rem 1.5rem;background:#818cf8;border:none;border-radius:8px;color:white;font-family:'Syne',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="app">
 
     <!-- NAV -->
@@ -1180,6 +1381,10 @@
                 <button onclick="openHistory()"
                   style="padding:0.4rem 0.9rem;background:transparent;border:1px solid #1e2433;border-radius:20px;color:#94a3b8;font-size:0.78rem;cursor:pointer">
                   History
+                </button>
+                <button onclick="openMasterPage()"
+                  style="padding:0.4rem 0.9rem;background:transparent;border:1px solid rgba(129,140,248,0.4);border-radius:20px;color:#a5b4fc;font-size:0.78rem;cursor:pointer">
+                  Chart of Accounts
                 </button>
                 <div style="width:28px;height:28px;border-radius:50%;background:#818cf8;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:white;cursor:pointer" id="navAvatar" title=""></div>
                 <button onclick="doLogout()"
@@ -2689,6 +2894,227 @@ async function loadHistoryResults(historyId) {
         toast(err.message, 'error');
     }
 }
+// ═══════════════════════════════════════════════════════
+//  CATEGORY MASTER
+// ═══════════════════════════════════════════════════════
+
+let _masterRows    = [];   // full list from server
+let _masterFiltered = [];  // after search/filter
+let _masterEditId  = null; // null = add, int = edit
+
+const MASTER_FIELDS = [
+  'code','account_name','type','sub_group','highlevel_classification',
+  'sch_iii_map','gst_flag','tds_section','boe_flag','is_active',
+  'llm_keywords','repeating_keywords','if_narration_keyword','if_not_party_name_keyword'
+];
+
+function openMasterPage() {
+    document.getElementById('masterPage').style.display = 'block';
+    loadMasterTable();
+}
+function closeMasterPage() {
+    document.getElementById('masterPage').style.display = 'none';
+}
+
+async function loadMasterTable() {
+    try {
+        const res  = await fetch(`${API}/master`, { credentials: 'include' });
+        if (res.status === 401) { showAuthModal('login'); return; }
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        _masterRows = data.rows || [];
+        renderMasterTable(_masterRows);
+        updateMasterStats(_masterRows);
+    } catch (err) {
+        toast(err.message, 'error');
+    }
+}
+
+function updateMasterStats(rows) {
+    const bar = document.getElementById('masterStatsBar');
+    const empty = document.getElementById('masterEmptyState');
+    if (!rows.length) { bar.style.display = 'none'; empty.style.display = 'block'; return; }
+    bar.style.display = 'flex'; empty.style.display = 'none';
+    document.getElementById('masterStatTotal').textContent    = rows.length;
+    document.getElementById('masterStatExpense').textContent  = rows.filter(r => r.type === 'Expense').length;
+    document.getElementById('masterStatKeywords').textContent = rows.filter(r => r.llm_keywords).length;
+    document.getElementById('masterStatGst').textContent      = rows.filter(r => r.gst_flag === 'Y').length;
+}
+
+function filterMasterTable() {
+    const q    = (document.getElementById('masterSearch').value || '').toLowerCase();
+    const type = (document.getElementById('masterTypeFilter').value || '').toLowerCase();
+    _masterFiltered = _masterRows.filter(r => {
+        const matchType = !type || (r.type || '').toLowerCase() === type;
+        if (!q) return matchType;
+        const haystack = [r.code, r.account_name, r.sub_group, r.llm_keywords,
+                          r.repeating_keywords, r.highlevel_classification]
+            .filter(Boolean).join(' ').toLowerCase();
+        return matchType && haystack.includes(q);
+    });
+    renderMasterTable(_masterFiltered);
+}
+
+const TYPE_COLORS = {
+    'Expense':   { bg: 'rgba(248,113,113,0.1)',  color: '#f87171' },
+    'Asset':     { bg: 'rgba(110,231,183,0.1)',  color: '#6ee7b7' },
+    'Liability': { bg: 'rgba(251,191,36,0.1)',   color: '#fbbf24' },
+    'Income':    { bg: 'rgba(129,140,248,0.1)',  color: '#818cf8' },
+    'Equity':    { bg: 'rgba(96,165,250,0.1)',   color: '#60a5fa' },
+};
+
+function renderMasterTable(rows) {
+    const tbody = document.getElementById('masterTableBody');
+    document.getElementById('masterTableCount').textContent = `${rows.length} account${rows.length !== 1 ? 's' : ''}`;
+    if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="9" style="padding:2rem;text-align:center;color:#64748b">No accounts match your filter</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = rows.map(r => {
+        const tc    = TYPE_COLORS[r.type] || { bg: 'rgba(100,116,139,0.1)', color: '#94a3b8' };
+        const kws   = (r.llm_keywords || '').split(',').filter(Boolean).slice(0, 4)
+            .map(k => `<span style="display:inline-block;padding:0.1rem 0.4rem;background:#1e2433;border-radius:4px;font-size:0.68rem;color:#94a3b8;margin:1px">${k.trim()}</span>`).join('');
+        const gstBadge = r.gst_flag
+            ? `<span style="padding:0.15rem 0.45rem;border-radius:4px;font-size:0.7rem;background:rgba(251,191,36,0.1);color:#fbbf24">${r.gst_flag}</span>` : '—';
+        const tdsBadge = r.tds_section
+            ? `<span style="padding:0.15rem 0.45rem;border-radius:4px;font-size:0.7rem;background:rgba(129,140,248,0.1);color:#a5b4fc">${r.tds_section}</span>` : '—';
+        const activeDot = r.is_active === 'FALSE'
+            ? `<span style="color:#64748b;font-size:0.7rem">Inactive</span>`
+            : `<span style="color:#6ee7b7;font-size:0.7rem">●</span>`;
+        return `<tr style="border-bottom:1px solid #1a1f2e;transition:background 0.15s" onmouseover="this.style.background='#0f1117'" onmouseout="this.style.background=''">
+          <td style="padding:0.7rem 0.85rem;color:#64748b;white-space:nowrap;font-family:'Syne',sans-serif">${r.code || '—'}</td>
+          <td style="padding:0.7rem 0.85rem;color:white;font-weight:500;max-width:200px">${r.account_name}</td>
+          <td style="padding:0.7rem 0.85rem;white-space:nowrap">
+            <span style="padding:0.2rem 0.55rem;border-radius:20px;font-size:0.72rem;background:${tc.bg};color:${tc.color}">${r.type || '—'}</span>
+          </td>
+          <td style="padding:0.7rem 0.85rem;color:#94a3b8;max-width:160px;font-size:0.76rem">${r.sub_group || '—'}</td>
+          <td style="padding:0.7rem 0.85rem;max-width:220px">${kws || '<span style="color:#1e2433;font-size:0.72rem">none</span>'}</td>
+          <td style="padding:0.7rem 0.85rem;text-align:center">${gstBadge}</td>
+          <td style="padding:0.7rem 0.85rem;text-align:center">${tdsBadge}</td>
+          <td style="padding:0.7rem 0.85rem;text-align:center">${activeDot}</td>
+          <td style="padding:0.7rem 0.85rem;text-align:center;white-space:nowrap">
+            <button onclick="editMasterRow(${r.id})"
+              style="padding:0.3rem 0.65rem;background:transparent;border:1px solid #1e2433;border-radius:6px;color:#94a3b8;font-size:0.72rem;cursor:pointer;margin-right:0.3rem">
+              Edit
+            </button>
+            <button onclick="deleteMasterRow(${r.id}, '${(r.account_name||'').replace(/'/g,"\'")}' )"
+              style="padding:0.3rem 0.65rem;background:transparent;border:1px solid rgba(248,113,113,0.2);border-radius:6px;color:#f87171;font-size:0.72rem;cursor:pointer">
+              Del
+            </button>
+          </td>
+        </tr>`;
+    }).join('');
+}
+
+// ── Add / Edit modal ──────────────────────────────────────
+
+function showAddRowModal() {
+    _masterEditId = null;
+    MASTER_FIELDS.forEach(f => {
+        const el = document.getElementById('mf_' + f);
+        if (el) el.value = f === 'is_active' ? 'TRUE' : '';
+    });
+    document.getElementById('masterModalTitle').textContent = 'Add Account';
+    document.getElementById('masterRowError').style.display = 'none';
+    document.getElementById('masterRowModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('mf_account_name').focus(), 50);
+}
+
+function editMasterRow(id) {
+    const row = _masterRows.find(r => r.id === id);
+    if (!row) return;
+    _masterEditId = id;
+    MASTER_FIELDS.forEach(f => {
+        const el = document.getElementById('mf_' + f);
+        if (el) el.value = row[f] || '';
+    });
+    document.getElementById('masterModalTitle').textContent = `Edit — ${row.account_name}`;
+    document.getElementById('masterRowError').style.display = 'none';
+    document.getElementById('masterRowModal').style.display = 'flex';
+}
+
+function closeMasterRowModal() {
+    document.getElementById('masterRowModal').style.display = 'none';
+}
+
+async function saveMasterRow() {
+    const btn  = document.getElementById('masterRowSaveBtn');
+    const errEl = document.getElementById('masterRowError');
+    errEl.style.display = 'none';
+
+    const payload = {};
+    MASTER_FIELDS.forEach(f => {
+        const el = document.getElementById('mf_' + f);
+        if (el) payload[f] = el.value.trim();
+    });
+
+    if (!payload.account_name) {
+        errEl.textContent = 'Account Name is required'; errEl.style.display = 'block'; return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+        const url    = _masterEditId ? `${API}/master/row/${_masterEditId}` : `${API}/master/row`;
+        const method = _masterEditId ? 'PUT' : 'POST';
+        const res    = await fetch(url, {
+            method, credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Save failed');
+        closeMasterRowModal();
+        await loadMasterTable();
+        toast(_masterEditId ? 'Account updated ✓' : 'Account added ✓', 'success');
+    } catch (err) {
+        errEl.textContent = err.message; errEl.style.display = 'block';
+    } finally {
+        btn.disabled = false; btn.textContent = 'Save';
+    }
+}
+
+async function deleteMasterRow(id, name) {
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+        const res = await fetch(`${API}/master/row/${id}`, { method: 'DELETE', credentials: 'include' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Delete failed');
+        await loadMasterTable();
+        toast('Account deleted', 'success');
+    } catch (err) {
+        toast(err.message, 'error');
+    }
+}
+
+async function uploadMasterFile(input) {
+    if (!input.files.length) return;
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+    input.value = '';
+    toast('Uploading and parsing…', 'success');
+    try {
+        const res  = await fetch(`${API}/master/upload`, { method: 'POST', body: formData, credentials: 'include' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Upload failed');
+        await loadMasterTable();
+        toast(data.message || `Loaded ${data.inserted} accounts ✓`, 'success');
+    } catch (err) {
+        toast(err.message, 'error');
+    }
+}
+
+function exportMaster() {
+    window.location.href = `${API}/master/export`;
+}
+
+// Close modal on overlay click
+document.getElementById('masterRowModal').addEventListener('click', function(e) {
+    if (e.target === this) closeMasterRowModal();
+});
+document.getElementById('masterPage').addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMasterPage();
+});
+
 </script>
 </body>
 </html>
