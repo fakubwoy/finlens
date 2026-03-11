@@ -513,6 +513,6 @@ def post_timing():
 
 
 if __name__ == '__main__':
-    print("🚀 Smart Expense Classifier Starting...")
-    print("📊 Server running on http://localhost:5000")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    print(f"🚀 Smart Expense Classifier Starting on port {port}...")
+    app.run(debug=False, host='0.0.0.0', port=port)
