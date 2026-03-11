@@ -1105,14 +1105,89 @@
     </style>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     AUTH MODAL
+════════════════════════════════════════════════════════════ -->
+<div id="authOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+  <div style="background:#0f1117;border:1px solid #1e2433;border-radius:16px;padding:2.5rem;width:100%;max-width:420px;position:relative">
+    <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:white;margin-bottom:0.25rem">fin<span style="color:#818cf8">lens</span></div>
+    <div id="authTitle" style="color:#94a3b8;font-size:0.85rem;margin-bottom:1.75rem">Sign in to your account</div>
+
+    <div id="signupNameWrap" style="display:none;margin-bottom:1rem">
+      <label style="color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:.05em">Full Name</label>
+      <input id="authName" type="text" placeholder="Your name"
+        style="width:100%;margin-top:0.35rem;padding:0.65rem 0.85rem;background:#171b27;border:1px solid #1e2433;border-radius:8px;color:white;font-size:0.9rem;box-sizing:border-box;outline:none">
+    </div>
+    <div style="margin-bottom:1rem">
+      <label style="color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:.05em">Email</label>
+      <input id="authEmail" type="email" placeholder="you@example.com"
+        style="width:100%;margin-top:0.35rem;padding:0.65rem 0.85rem;background:#171b27;border:1px solid #1e2433;border-radius:8px;color:white;font-size:0.9rem;box-sizing:border-box;outline:none">
+    </div>
+    <div style="margin-bottom:1.5rem">
+      <label style="color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:.05em">Password</label>
+      <input id="authPassword" type="password" placeholder="••••••••"
+        style="width:100%;margin-top:0.35rem;padding:0.65rem 0.85rem;background:#171b27;border:1px solid #1e2433;border-radius:8px;color:white;font-size:0.9rem;box-sizing:border-box;outline:none">
+    </div>
+
+    <div id="authError" style="display:none;color:#f87171;font-size:0.8rem;margin-bottom:1rem;padding:0.6rem 0.85rem;background:rgba(248,113,113,0.08);border-radius:6px"></div>
+
+    <button id="authSubmitBtn" onclick="submitAuth()"
+      style="width:100%;padding:0.75rem;background:#818cf8;border:none;border-radius:8px;color:white;font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;cursor:pointer">
+      Sign In
+    </button>
+
+    <div style="text-align:center;margin-top:1.25rem;color:#64748b;font-size:0.82rem">
+      <span id="authToggleText">Don't have an account?</span>
+      <a id="authToggleLink" href="#" onclick="toggleAuthMode(event)"
+        style="color:#818cf8;text-decoration:none;margin-left:0.35rem;font-weight:600">Sign Up</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HISTORY SIDE PANEL
+════════════════════════════════════════════════════════════ -->
+<div id="historyPanel" style="display:none;position:fixed;top:0;right:0;width:380px;height:100vh;background:#0c0e14;border-left:1px solid #1e2433;z-index:900;overflow-y:auto;padding:1.5rem;box-sizing:border-box">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:white">Past Classifications</div>
+    <button onclick="closeHistory()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.25rem;padding:0.25rem">✕</button>
+  </div>
+  <div id="historyList"><div style="color:#64748b;font-size:0.85rem;text-align:center;padding:2rem 0">Loading…</div></div>
+</div>
+
 <div class="app">
 
     <!-- NAV -->
     <nav>
         <div class="logo">fin<span>lens</span></div>
-        <div class="nav-pill">
-            <div class="dot"></div>
-            <span id="aiStatus">AI Classification Active</span>
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-left:auto">
+            <div class="nav-pill">
+                <div class="dot"></div>
+                <span id="aiStatus">AI Classification Active</span>
+            </div>
+            <!-- Auth / user controls -->
+            <div id="navAuthArea" style="display:flex;align-items:center;gap:0.5rem">
+              <button id="navLoginBtn" onclick="showAuthModal('login')"
+                style="padding:0.4rem 0.9rem;background:transparent;border:1px solid #1e2433;border-radius:20px;color:#94a3b8;font-size:0.78rem;cursor:pointer">
+                Sign In
+              </button>
+              <button id="navSignupBtn" onclick="showAuthModal('signup')"
+                style="padding:0.4rem 0.9rem;background:#818cf8;border:none;border-radius:20px;color:white;font-family:'Syne',sans-serif;font-weight:600;font-size:0.78rem;cursor:pointer">
+                Sign Up
+              </button>
+              <div id="navUserBadge" style="display:none;align-items:center;gap:0.5rem">
+                <button onclick="openHistory()"
+                  style="padding:0.4rem 0.9rem;background:transparent;border:1px solid #1e2433;border-radius:20px;color:#94a3b8;font-size:0.78rem;cursor:pointer">
+                  History
+                </button>
+                <div style="width:28px;height:28px;border-radius:50%;background:#818cf8;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:white;cursor:pointer" id="navAvatar" title=""></div>
+                <button onclick="doLogout()"
+                  style="padding:0.4rem 0.75rem;background:transparent;border:1px solid #1e2433;border-radius:20px;color:#64748b;font-size:0.75rem;cursor:pointer">
+                  Log out
+                </button>
+              </div>
+            </div>
         </div>
     </nav>
 
@@ -1148,6 +1223,18 @@
                 <div class="file-meta" id="fileMeta">—</div>
             </div>
             <div class="file-badge" id="fileTypeBadge">—</div>
+        </div>
+
+        <!-- Already classified banner -->
+        <div id="cachedBanner" style="display:none;margin-top:1rem;padding:0.85rem 1.1rem;background:rgba(129,140,248,0.08);border:1px solid rgba(129,140,248,0.25);border-radius:10px;display:none;align-items:center;gap:1rem">
+          <div style="flex:1">
+            <div style="color:#a5b4fc;font-weight:600;font-size:0.85rem">This file was already classified</div>
+            <div style="color:#64748b;font-size:0.78rem;margin-top:0.15rem">Load your previous results instantly, or re-classify from scratch.</div>
+          </div>
+          <button onclick="loadCachedResults()"
+            style="padding:0.45rem 0.9rem;background:#818cf8;border:none;border-radius:8px;color:white;font-family:'Syne',sans-serif;font-weight:600;font-size:0.8rem;cursor:pointer;white-space:nowrap">
+            Load Previous
+          </button>
         </div>
 
         <!-- Preview -->
@@ -1322,13 +1409,7 @@
                     </div>
                     <div class="trend-empty" id="trendEmpty" style="display:none">No date data available for timeline</div>
                 </div>
-                <div class="chart-panel">
-                    <div class="chart-panel-title">Classification Accuracy</div>
-                    <div class="chart-panel-sub">Confidence score distribution</div>
-                    <div class="chart-container" style="height:220px">
-                        <canvas id="chartConfidence"></canvas>
-                    </div>
-                </div>
+
             </div>
 
             <!-- Row 3: Top vendors + method doughnut -->
@@ -1337,14 +1418,6 @@
                     <div class="chart-panel-title">Top Vendors / Payees</div>
                     <div class="chart-panel-sub">Highest spend vendors by total value</div>
                     <div class="vendor-list" id="topVendorsList"></div>
-                </div>
-                <div class="chart-panel">
-                    <div class="chart-panel-title">Classification Method Split</div>
-                    <div class="chart-panel-sub">How transactions were classified</div>
-                    <div class="chart-container" style="height:200px">
-                        <canvas id="chartMethod"></canvas>
-                    </div>
-                    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem" id="methodBreakdownAnalytics"></div>
                 </div>
             </div>
         </div>
@@ -1432,7 +1505,7 @@ let state = {
 async function forceUseAsTransactions(e) {
     e.preventDefault();
     // Re-upload the same file as a transactions file by hitting a special endpoint
-    const res = await fetch(`${API}/force-transactions`, { method: 'POST' });
+    const res = await fetch(`${API}/force-transactions`, { method: 'POST', credentials: 'include' });
     const data = await res.json();
     if (data.success) {
         state.fileUploaded = true;
@@ -1478,7 +1551,7 @@ async function processFile(file) {
     document.getElementById('uploadIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:#fbbf24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
 
     try {
-        const res = await fetch(`${API}/upload`, { method: 'POST', body: formData });
+        const res = await fetch(`${API}/upload`, { method: 'POST', body: formData, credentials: 'include' });
 
         // Guard against non-JSON responses
         const contentType = res.headers.get('content-type') || '';
@@ -1561,6 +1634,14 @@ async function processFile(file) {
         state.fileUploaded = true;
         state.transactionsLoaded = true;
         state.lastRowCount = data.total_rows;
+
+        // Show "already classified" banner if applicable
+        const cb = document.getElementById('cachedBanner');
+        if (data.already_classified && cb) {
+            cb.style.display = 'flex';
+        } else if (cb) {
+            cb.style.display = 'none';
+        }
 
         // Remove any force-classify note if showing
         const fn = document.getElementById('forceClassifyNote');
@@ -2249,36 +2330,6 @@ function renderAnalytics(results, stats) {
         trendEmpty.style.display = 'block';
     }
 
-    // ── Confidence Distribution Chart ────────────────────────
-    _destroyChart('confidence');
-    const bins = new Array(10).fill(0); // 0-10%, 10-20% ... 90-100%
-    results.forEach(r => {
-        const c = parseFloat(r.Confidence) || 0;
-        const idx = Math.min(9, Math.floor(c * 10));
-        bins[idx]++;
-    });
-    _charts['confidence'] = new Chart(document.getElementById('chartConfidence'), {
-        type: 'bar',
-        data: {
-            labels: ['0–10%','10–20%','20–30%','30–40%','40–50%','50–60%','60–70%','70–80%','80–90%','90–100%'],
-            datasets: [{
-                label: 'Transactions',
-                data: bins,
-                backgroundColor: ['#f87171','#f87171','#fb923c','#fb923c','#fbbf24','#fbbf24','#a3e635','#6ee7b7','#34d399','#34d399'],
-                borderWidth: 0,
-                borderRadius: 4,
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip: { ..._chartTheme().plugins.tooltip } },
-            scales: {
-                x: { ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 30 }, grid: { display: false } },
-                y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
-            }
-        }
-    });
-
     // ── Top Vendors ───────────────────────────────────────────
     const descKey = results.length > 0 ? (Object.keys(results[0]).find(k => ['description','narration','desc','particulars','details','merchant'].includes(k.toLowerCase())) || Object.keys(results[0])[0]) : null;
     const vendorList = document.getElementById('topVendorsList');
@@ -2305,50 +2356,6 @@ function renderAnalytics(results, stats) {
         vendorList.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:1rem 0">No description data available</div>';
     }
 
-    // ── Method Doughnut ───────────────────────────────────────
-    _destroyChart('method');
-    const unclassifiedCount = Math.max(0, stats.total - stats.ai_classified - stats.keyword_classified);
-    const methodData = [
-        { label: 'AI Classification', value: stats.ai_classified, color: '#818cf8' },
-        { label: 'Keyword Match', value: stats.keyword_classified, color: '#6ee7b7' },
-        { label: 'Unclassified', value: unclassifiedCount, color: '#f87171' },
-    ].filter(m => m.value > 0);
-
-    _charts['method'] = new Chart(document.getElementById('chartMethod'), {
-        type: 'doughnut',
-        data: {
-            labels: methodData.map(m => m.label),
-            datasets: [{
-                data: methodData.map(m => m.value),
-                backgroundColor: methodData.map(m => m.color),
-                borderColor: '#0c0e14',
-                borderWidth: 2,
-                hoverOffset: 6,
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            cutout: '55%',
-            plugins: {
-                legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10, padding: 10 } },
-                tooltip: { ..._chartTheme().plugins.tooltip }
-            }
-        }
-    });
-
-    // Method summary text rows
-    const methodSummaryEl = document.getElementById('methodBreakdownAnalytics');
-    methodSummaryEl.innerHTML = methodData.map(m => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);">
-            <div style="display:flex;align-items:center;gap:0.5rem">
-                <div style="width:8px;height:8px;border-radius:50%;background:${m.color};flex-shrink:0"></div>
-                <span style="font-size:0.8rem;color:var(--text)">${m.label}</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.75rem">
-                <span style="font-size:0.72rem;color:var(--muted)">${Math.round(m.value/stats.total*100)}%</span>
-                <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:white">${m.value.toLocaleString()}</span>
-            </div>
-        </div>`).join('');
 }
 
 function renderTable(results) {
@@ -2461,7 +2468,7 @@ function toast(msg, type = '') {
 // ─── Init ──────────────────────────────────────────────────────
 (async () => {
     try {
-        const res = await fetch(`${API}/stats`);
+        const res = await fetch(`${API}/stats`, { credentials: 'include' });
         const data = await res.json();
         const providerLabel = {
             'anthropic': 'Claude AI Active',
@@ -2469,8 +2476,223 @@ function toast(msg, type = '') {
             'none': 'Keyword Mode'
         }[data.ai_provider] || 'AI Active';
         document.getElementById('aiStatus').textContent = providerLabel;
+
+        // Update nav auth state from /api/stats
+        if (data.authenticated) {
+            setLoggedIn({ name: data.user_name, email: data.user_email });
+        } else {
+            setLoggedOut();
+        }
     } catch (_) {}
 })();
+
+// ═══════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════
+
+let _authMode = 'login';
+
+function showAuthModal(mode) {
+    _authMode = mode || 'login';
+    document.getElementById('authError').style.display = 'none';
+    document.getElementById('authEmail').value = '';
+    document.getElementById('authPassword').value = '';
+    document.getElementById('authName').value = '';
+    if (_authMode === 'signup') {
+        document.getElementById('authTitle').textContent = 'Create your account';
+        document.getElementById('authSubmitBtn').textContent = 'Sign Up';
+        document.getElementById('signupNameWrap').style.display = 'block';
+        document.getElementById('authToggleText').textContent = 'Already have an account?';
+        document.getElementById('authToggleLink').textContent = 'Sign In';
+    } else {
+        document.getElementById('authTitle').textContent = 'Sign in to your account';
+        document.getElementById('authSubmitBtn').textContent = 'Sign In';
+        document.getElementById('signupNameWrap').style.display = 'none';
+        document.getElementById('authToggleText').textContent = "Don't have an account?";
+        document.getElementById('authToggleLink').textContent = 'Sign Up';
+    }
+    document.getElementById('authOverlay').style.display = 'flex';
+    setTimeout(() => (_authMode === 'signup'
+        ? document.getElementById('authName')
+        : document.getElementById('authEmail')).focus(), 50);
+}
+
+function toggleAuthMode(e) {
+    e.preventDefault();
+    showAuthModal(_authMode === 'login' ? 'signup' : 'login');
+}
+
+async function submitAuth() {
+    const btn = document.getElementById('authSubmitBtn');
+    const errEl = document.getElementById('authError');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = _authMode === 'login' ? 'Signing in…' : 'Creating account…';
+
+    const body = {
+        email: document.getElementById('authEmail').value.trim(),
+        password: document.getElementById('authPassword').value,
+    };
+    if (_authMode === 'signup') body.name = document.getElementById('authName').value.trim();
+
+    try {
+        const res = await fetch(`${API}/auth/${_authMode}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Authentication failed');
+        document.getElementById('authOverlay').style.display = 'none';
+        setLoggedIn(data.user);
+        toast(`Welcome, ${data.user.name}! 👋`, 'success');
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = _authMode === 'login' ? 'Sign In' : 'Sign Up';
+    }
+}
+
+async function doLogout() {
+    await fetch(`${API}/auth/logout`, { method: 'POST', credentials: 'include' });
+    setLoggedOut();
+    toast('Logged out', 'success');
+}
+
+function setLoggedIn(user) {
+    document.getElementById('navLoginBtn').style.display = 'none';
+    document.getElementById('navSignupBtn').style.display = 'none';
+    const badge = document.getElementById('navUserBadge');
+    badge.style.display = 'flex';
+    const avatar = document.getElementById('navAvatar');
+    avatar.textContent = (user.name || user.email || '?')[0].toUpperCase();
+    avatar.title = user.name || user.email;
+}
+
+function setLoggedOut() {
+    document.getElementById('navLoginBtn').style.display = '';
+    document.getElementById('navSignupBtn').style.display = '';
+    document.getElementById('navUserBadge').style.display = 'none';
+}
+
+// Close auth modal on overlay click
+document.getElementById('authOverlay').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+
+// Submit on Enter
+document.getElementById('authPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitAuth();
+});
+
+// ═══════════════════════════════════════════════════════
+//  Load cached results for current file
+// ═══════════════════════════════════════════════════════
+
+async function loadCachedResults() {
+    try {
+        const res = await fetch(`${API}/load-cached`, {
+            method: 'POST', credentials: 'include'
+        });
+        if (res.status === 401) { showAuthModal('login'); return; }
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to load cached results');
+
+        document.getElementById('cachedBanner').style.display = 'none';
+
+        // Render results (reuse existing renderResults / renderTable functions)
+        if (typeof renderResults === 'function') renderResults(data.results, data.stats);
+        else if (typeof renderTable === 'function') {
+            renderTable(data.results);
+            renderCharts(data.results, data.stats);
+            showResultsSection(data.stats);
+        }
+        toast('Loaded previous results ✓', 'success');
+    } catch (err) {
+        toast(err.message, 'error');
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+//  HISTORY PANEL
+// ═══════════════════════════════════════════════════════
+
+async function openHistory() {
+    document.getElementById('historyPanel').style.display = 'block';
+    await loadHistory();
+}
+
+function closeHistory() {
+    document.getElementById('historyPanel').style.display = 'none';
+}
+
+async function loadHistory() {
+    const listEl = document.getElementById('historyList');
+    listEl.innerHTML = '<div style="color:#64748b;font-size:0.85rem;text-align:center;padding:2rem 0">Loading…</div>';
+    try {
+        const res = await fetch(`${API}/history`, { credentials: 'include' });
+        if (res.status === 401) {
+            listEl.innerHTML = '<div style="color:#64748b;font-size:0.85rem;text-align:center;padding:2rem 0">Please sign in to view history.</div>';
+            return;
+        }
+        const data = await res.json();
+        if (!data.history || data.history.length === 0) {
+            listEl.innerHTML = '<div style="color:#64748b;font-size:0.85rem;text-align:center;padding:2rem 0">No classifications yet. Upload a file to get started.</div>';
+            return;
+        }
+        listEl.innerHTML = data.history.map(h => {
+            const d = new Date(h.created_at);
+            const dateStr = d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+            const timeStr = d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+            const total = h.stats?.total || h.total_rows || '?';
+            const needs = h.stats?.needs_review || 0;
+            return `
+            <div style="border:1px solid #1e2433;border-radius:10px;padding:1rem;margin-bottom:0.75rem;background:#0f1117">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem">
+                <div style="font-size:0.82rem;color:white;font-weight:600;word-break:break-all;flex:1">${h.filename}</div>
+                <div style="font-size:0.7rem;color:#64748b;white-space:nowrap">${dateStr}<br>${timeStr}</div>
+              </div>
+              <div style="margin-top:0.5rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+                <span style="font-size:0.72rem;padding:0.2rem 0.55rem;background:rgba(129,140,248,0.1);border-radius:20px;color:#a5b4fc">${total} rows</span>
+                ${needs > 0 ? `<span style="font-size:0.72rem;padding:0.2rem 0.55rem;background:rgba(248,113,113,0.1);border-radius:20px;color:#f87171">${needs} need review</span>` : ''}
+              </div>
+              <div style="margin-top:0.75rem;display:flex;gap:0.5rem">
+                <button onclick="loadHistoryResults(${h.id})"
+                  style="flex:1;padding:0.4rem;background:#818cf8;border:none;border-radius:6px;color:white;font-size:0.75rem;cursor:pointer;font-weight:600">
+                  Load Results
+                </button>
+                <a href="${API}/history/${h.id}/download"
+                  style="flex:1;padding:0.4rem;background:transparent;border:1px solid #1e2433;border-radius:6px;color:#94a3b8;font-size:0.75rem;cursor:pointer;text-align:center;text-decoration:none">
+                  Download CSV
+                </a>
+              </div>
+            </div>`;
+        }).join('');
+    } catch (err) {
+        listEl.innerHTML = `<div style="color:#f87171;font-size:0.82rem;text-align:center;padding:1rem">${err.message}</div>`;
+    }
+}
+
+async function loadHistoryResults(historyId) {
+    try {
+        const res = await fetch(`${API}/history/${historyId}/results`, { credentials: 'include' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to load results');
+        closeHistory();
+        if (typeof renderResults === 'function') renderResults(data.results, data.stats);
+        else if (typeof renderTable === 'function') {
+            renderTable(data.results);
+            renderCharts(data.results, data.stats);
+            showResultsSection(data.stats);
+        }
+        toast(`Loaded: ${data.filename}`, 'success');
+    } catch (err) {
+        toast(err.message, 'error');
+    }
+}
 </script>
 </body>
 </html>
