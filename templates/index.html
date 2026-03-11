@@ -2588,7 +2588,17 @@ document.getElementById('authPassword').addEventListener('keydown', e => {
 //  Load cached results for current file
 // ═══════════════════════════════════════════════════════
 
+// Shared helper: show results area exactly as a fresh classification does
+function _displayResults(results, stats) {
+    renderResults(results, stats);
+    const area = document.getElementById('resultsArea');
+    area.classList.add('visible');
+    area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function loadCachedResults() {
+    const btn = document.querySelector('#cachedBanner button');
+    if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
     try {
         const res = await fetch(`${API}/load-cached`, {
             method: 'POST', credentials: 'include'
@@ -2598,17 +2608,12 @@ async function loadCachedResults() {
         if (!data.success) throw new Error(data.error || 'Failed to load cached results');
 
         document.getElementById('cachedBanner').style.display = 'none';
-
-        // Render results (reuse existing renderResults / renderTable functions)
-        if (typeof renderResults === 'function') renderResults(data.results, data.stats);
-        else if (typeof renderTable === 'function') {
-            renderTable(data.results);
-            renderCharts(data.results, data.stats);
-            showResultsSection(data.stats);
-        }
-        toast('Loaded previous results ✓', 'success');
+        _displayResults(data.results, data.stats);
+        toast('Previous results loaded ✓', 'success');
     } catch (err) {
         toast(err.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Load Previous'; }
     }
 }
 
@@ -2678,12 +2683,7 @@ async function loadHistoryResults(historyId) {
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Failed to load results');
         closeHistory();
-        if (typeof renderResults === 'function') renderResults(data.results, data.stats);
-        else if (typeof renderTable === 'function') {
-            renderTable(data.results);
-            renderCharts(data.results, data.stats);
-            showResultsSection(data.stats);
-        }
+        _displayResults(data.results, data.stats);
         toast(`Loaded: ${data.filename}`, 'success');
     } catch (err) {
         toast(err.message, 'error');
