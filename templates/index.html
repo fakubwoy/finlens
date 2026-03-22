@@ -717,161 +717,307 @@
             color: white;
         }
 
-        /* ─── TABLE ─── */
-        .table-panel {
+        /* ─── EXCEL-LIKE GRID ─── */
+        .xg-panel {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 16px;
             overflow: hidden;
+            margin-top: 1.5rem;
         }
 
-        .table-header {
+        /* Toolbar */
+        .xg-toolbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 1.25rem 1.5rem;
+            padding: 0.75rem 1rem;
             border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+            gap: 0.75rem;
+            flex-wrap: wrap;
         }
-
-        .table-title {
+        .xg-toolbar-left  { display:flex;align-items:center;gap:0.75rem;flex-shrink:0; }
+        .xg-toolbar-right { display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap; }
+        .xg-title {
             font-family: 'Syne', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 700;
+            font-weight: 700; font-size: 0.82rem;
             color: var(--muted2);
             text-transform: uppercase;
             letter-spacing: 0.09em;
         }
-
-        .table-count {
-            font-size: 0.8rem;
-            color: var(--muted);
+        .xg-count { font-size:0.75rem;color:var(--muted); }
+        .xg-unsaved { font-size:0.72rem;color:#fbbf24;font-weight:600; }
+        .xg-filters { display:flex;gap:0.3rem; }
+        .xg-chip {
+            font-size:0.72rem;font-weight:600;padding:0.3rem 0.65rem;
+            border-radius:20px;border:1px solid var(--border-bright);
+            background:transparent;color:var(--muted2);cursor:pointer;
+            transition:all 0.15s;white-space:nowrap;
         }
+        .xg-chip:hover { border-color:var(--accent);color:var(--accent); }
+        .xg-chip.active { background:rgba(110,231,183,0.12);border-color:rgba(110,231,183,0.4);color:var(--accent); }
+        .xg-search {
+            padding:0.3rem 0.7rem;background:var(--surface);
+            border:1px solid var(--border-bright);border-radius:6px;
+            color:var(--text);font-size:0.78rem;outline:none;width:180px;
+        }
+        .xg-search:focus { border-color:var(--accent); }
+        .xg-btn {
+            padding:0.3rem 0.7rem;background:var(--surface);
+            border:1px solid var(--border-bright);border-radius:6px;
+            color:var(--muted2);font-size:0.75rem;cursor:pointer;
+            white-space:nowrap;transition:all 0.15s;
+        }
+        .xg-btn:hover { border-color:var(--accent);color:var(--accent); }
+        .xg-btn-primary {
+            background:rgba(110,231,183,0.12);border-color:rgba(110,231,183,0.4);
+            color:var(--accent);font-weight:600;
+        }
+        .xg-btn-primary:hover { background:rgba(110,231,183,0.22); }
 
-        .table-wrap { overflow-x: hidden; width: 100%; }
+        /* Grid scroll container */
+        .xg-wrap {
+            overflow: auto;
+            max-height: 68vh;
+            position: relative;
+        }
+        /* Scrollbar styling */
+        .xg-wrap::-webkit-scrollbar { width:8px;height:8px; }
+        .xg-wrap::-webkit-scrollbar-track { background:var(--surface2); }
+        .xg-wrap::-webkit-scrollbar-thumb { background:#2a3044;border-radius:4px; }
+        .xg-wrap::-webkit-scrollbar-thumb:hover { background:#3a4060; }
+        .xg-wrap::-webkit-scrollbar-corner { background:var(--surface2); }
 
-        table {
+        /* Table */
+        .xg-table {
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
+            font-size: 0.8rem;
         }
 
-        /* Column widths — fixed to prevent overflow */
-        thead th:nth-child(1) { width: 90px; }   /* Date */
-        thead th:nth-child(2) { width: auto; }    /* Description — flex */
-        thead th:nth-child(3) { width: 100px; }  /* Amount */
-        thead th:nth-child(4) { width: 160px; }  /* Category */
-        thead th:nth-child(5) { width: 90px; }   /* Confidence */
-        thead th:nth-child(6) { width: 52px; }   /* Method */
-        thead th:nth-child(7) { width: 100px; }  /* Status */
-
-        thead th {
-            font-size: 0.68rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--muted);
-            padding: 0.7rem 0.75rem;
+        /* Header */
+        .xg-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .xg-table thead th {
+            background: #0f1119;
+            border-right: 1px solid var(--border);
+            border-bottom: 2px solid rgba(110,231,183,0.2);
+            padding: 0.5rem 0.6rem;
             text-align: left;
-            background: var(--surface2);
-            border-bottom: 1px solid var(--border);
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        tbody tr {
-            border-bottom: 1px solid var(--border);
-            transition: background 0.15s;
-        }
-
-        tbody tr:last-child { border-bottom: none; }
-        tbody tr:hover { background: rgba(255,255,255,0.02); }
-
-        tbody td {
-            padding: 0.7rem 0.75rem;
-            font-size: 0.82rem;
-            color: var(--text);
-            vertical-align: middle;
-            overflow: hidden;
-        }
-
-        .td-desc {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-weight: 500;
-            max-width: 0; /* forces ellipsis in fixed layout */
-        }
-
-        .td-amount {
-            font-family: 'Syne', sans-serif;
+            font-size: 0.68rem;
             font-weight: 700;
-            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--muted2);
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+        .xg-table thead th:hover { background:#13172a;color:var(--accent); }
+        .xg-table thead th .sort-arrow { margin-left:4px;opacity:0.4;font-size:0.65rem; }
+        .xg-table thead th.sorted-asc  .sort-arrow,
+        .xg-table thead th.sorted-desc .sort-arrow { opacity:1;color:var(--accent); }
+        /* Row-number column */
+        .xg-table thead th:first-child,
+        .xg-table tbody td:first-child {
+            width: 46px;
+            min-width: 46px;
+            max-width: 46px;
+            background: #0d1020;
+            color: var(--muted);
+            font-size: 0.67rem;
+            text-align: center;
+            padding: 0.4rem 0.3rem;
+            border-right: 2px solid rgba(255,255,255,0.07);
+            cursor: default;
+        }
+        .xg-table thead th:first-child { cursor:default; }
+
+        /* Rows */
+        .xg-table tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.08s;
+        }
+        .xg-table tbody tr:last-child { border-bottom: none; }
+        .xg-table tbody tr:hover { background: rgba(255,255,255,0.018); }
+        .xg-table tbody tr.xg-row-selected { background: rgba(110,231,183,0.05); }
+        .xg-table tbody tr.xg-row-edited td:first-child {
+            background: rgba(251,191,36,0.12) !important;
+            color: #fbbf24 !important;
+        }
+        .xg-table tbody tr.xg-row-edited td:first-child::after {
+            content: '✎';
+            display:block;
+            font-size:0.6rem;
         }
 
-        .cat-badge {
-            display: inline-block;
-            font-size: 0.7rem;
-            font-weight: 500;
-            padding: 0.2rem 0.5rem;
-            border-radius: 5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 100%;
+        /* Cells */
+        .xg-table tbody td {
+            padding: 0 0;
+            vertical-align: middle;
+            border-right: 1px solid var(--border);
+            position: relative;
+            overflow: visible;
+        }
+        .xg-table tbody td.xg-cell-focus {
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+            z-index: 2;
+            background: rgba(110,231,183,0.04);
+        }
+        .xg-table tbody td.xg-cell-editing {
+            outline: 2px solid #818cf8;
+            outline-offset: -2px;
+            z-index: 3;
+            background: rgba(129,140,248,0.07);
+        }
+        .xg-table tbody td.xg-cell-changed {
+            background: rgba(251,191,36,0.06);
+        }
+        .xg-table tbody td.xg-cell-changed .xg-cell-inner::after {
+            content: '';
+            position: absolute;
+            top: 3px; right: 3px;
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: #fbbf24;
+        }
+        /* Range selection highlight */
+        .xg-table tbody td.xg-cell-range {
+            background: rgba(110,231,183,0.08);
+            outline: 1px solid rgba(110,231,183,0.25);
+            outline-offset: -1px;
         }
 
-        .conf-bar-wrap {
+        /* Cell inner wrapper */
+        .xg-cell-inner {
+            padding: 0.45rem 0.6rem;
+            min-height: 32px;
             display: flex;
             align-items: center;
-            gap: 0.4rem;
-        }
-
-        .conf-mini {
-            width: 36px; height: 4px;
-            background: var(--surface2);
-            border-radius: 2px;
+            position: relative;
             overflow: hidden;
-            flex-shrink: 0;
+        }
+        /* Editable cells get a subtle right edge indicator */
+        td.xg-editable .xg-cell-inner::before {
+            content: '';
+            position: absolute;
+            right: 0; top: 20%; bottom: 20%;
+            width: 2px;
+            background: rgba(110,231,183,0.15);
+            border-radius: 1px;
+        }
+        td.xg-cell-focus.xg-editable .xg-cell-inner::before { background: rgba(110,231,183,0.5); }
+
+        /* Inline input (appears when editing) */
+        .xg-inline-input {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text);
+            font-size: 0.8rem;
+            font-family: 'Inter', sans-serif;
+            padding: 0;
+            caret-color: var(--accent);
         }
 
-        .conf-mini-fill { height: 100%; border-radius: 2px; }
-        .conf-pct { font-size: 0.72rem; color: var(--muted2); font-weight: 600; white-space: nowrap; }
-
-        .status-badge {
-            font-size: 0.65rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 0.2rem 0.5rem;
-            border-radius: 5px;
+        /* Category dropdown portal */
+        .xg-cat-drop {
+            position: fixed;
+            z-index: 9999;
+            background: #171c2b;
+            border: 1px solid rgba(110,231,183,0.25);
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            min-width: 220px;
+            max-width: 320px;
+            overflow: hidden;
+        }
+        .xg-cat-search {
+            width: 100%;
+            padding: 0.55rem 0.75rem;
+            background: #1e2438;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.8rem;
+            outline: none;
+        }
+        .xg-cat-list {
+            max-height: 240px;
+            overflow-y: auto;
+        }
+        .xg-cat-list::-webkit-scrollbar { width:5px; }
+        .xg-cat-list::-webkit-scrollbar-thumb { background:#2a3044;border-radius:3px; }
+        .xg-cat-item {
+            padding: 0.45rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.78rem;
+            color: var(--text);
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.1s;
             white-space: nowrap;
-            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .xg-cat-item:hover, .xg-cat-item.xg-cat-active { background: rgba(110,231,183,0.1); color:var(--accent); }
+
+        /* Cell type styles */
+        .xg-val-date { color: var(--muted2); font-size:0.75rem; white-space:nowrap; }
+        .xg-val-desc { font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%; }
+        .xg-val-amount {
+            font-family:'Syne',sans-serif;font-weight:700;color:white;
+            white-space:nowrap;text-align:right;
+        }
+        .xg-val-amount.neg { color:#f87171; }
+        .xg-val-code { color:var(--muted);font-size:0.73rem;font-family:monospace; }
+
+        /* Category badge */
+        .xg-cat-badge {
+            display:inline-flex;align-items:center;
+            font-size:0.71rem;font-weight:500;
+            padding:0.15rem 0.5rem;border-radius:5px;
+            white-space:nowrap;max-width:100%;
+            overflow:hidden;text-overflow:ellipsis;
+        }
+        /* Confidence bar */
+        .xg-conf-wrap { display:flex;align-items:center;gap:0.35rem; }
+        .xg-conf-bar { width:34px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;flex-shrink:0; }
+        .xg-conf-fill { height:100%;border-radius:2px; }
+        .xg-conf-pct { font-size:0.7rem;font-weight:600;white-space:nowrap; }
+        /* Method badge */
+        .xg-method { font-size:0.68rem;font-weight:700;padding:0.1rem 0.35rem;border-radius:4px; }
+        .xg-method-ai  { background:rgba(129,140,248,0.1);color:#818cf8; }
+        .xg-method-kw  { background:rgba(110,231,183,0.1);color:#6ee7b7; }
+        .xg-method-cor { background:rgba(251,191,36,0.1);color:#fbbf24; }
+        /* Status badge */
+        .xg-status { font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:0.15rem 0.45rem;border-radius:4px; }
+        .xg-status-ok  { background:rgba(52,211,153,0.1);color:#34d399;border:1px solid rgba(52,211,153,0.2); }
+        .xg-status-rev { background:rgba(251,146,60,0.1);color:#fb923c;border:1px solid rgba(251,146,60,0.2); }
+        .xg-status-low { background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.2); }
+
+        /* Status bar */
+        .xg-statusbar {
+            display:flex;align-items:center;justify-content:space-between;
+            padding:0.35rem 1rem;
+            background:#0d1020;
+            border-top:1px solid var(--border);
+            font-size:0.7rem;color:var(--muted);
         }
 
-
-
-        .status-review {
-            background: rgba(251,146,60,0.1);
-            color: #fb923c;
-            border: 1px solid rgba(251,146,60,0.2);
-        }
-
-        .status-low {
-            background: rgba(248,113,113,0.1);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.2);
-        }
-
-        .status-approved {
-            background: rgba(52,211,153,0.1);
-            color: #34d399;
-            border: 1px solid rgba(52,211,153,0.2);
-        }
+        /* Frozen columns: row-num + Date + Description */
+        /* (We'll keep it simple — just sticky-top header is enough) */
 
         /* ─── TOAST ─── */
+/* ─── TOAST ─── */
         .toast {
             position: fixed;
             bottom: 2rem; right: 2rem;
@@ -1679,72 +1825,58 @@
             </div>
         </div>
 
-        <!-- Table -->
-        <div class="table-panel fade-up">
-            <div class="table-header">
-                <div class="table-title">All Transactions</div>
-                <div class="table-count" id="tableCount"></div>
-            </div>
-            <div style="padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border);">
-                <div class="filter-bar">
-                    <button class="filter-btn active" data-filter="all" onclick="filterTable('all',this)">All</button>
-                    <button class="filter-btn" data-filter="Approved" onclick="filterTable('Approved',this)">Approved</button>
-                    <button class="filter-btn" data-filter="Needs Review" onclick="filterTable('Needs Review',this)">Needs Review</button>
-                    <button class="filter-btn" data-filter="ai" onclick="filterTable('ai',this)">AI Classified</button>
-                    <button class="filter-btn" data-filter="keyword" onclick="filterTable('keyword',this)">Keyword Match</button>
-                    <div class="filter-spacer"></div>
-                    <input class="search-input" id="searchInput" type="text" placeholder="Search transactions..." oninput="searchTable(this.value)">
+        <!-- Table (Excel-like inline editable grid) -->
+        <div class="xg-panel fade-up" id="xgPanel">
+            <!-- Toolbar -->
+            <div class="xg-toolbar">
+                <div class="xg-toolbar-left">
+                    <span class="xg-title">All Transactions</span>
+                    <span class="xg-count" id="tableCount"></span>
+                    <span class="xg-unsaved" id="xgUnsaved" style="display:none">● Unsaved changes</span>
+                </div>
+                <div class="xg-toolbar-right">
+                    <!-- Filter chips -->
+                    <div class="xg-filters">
+                        <button class="xg-chip active" data-filter="all" onclick="filterTable('all',this)">All</button>
+                        <button class="xg-chip" data-filter="Approved" onclick="filterTable('Approved',this)">✓ Approved</button>
+                        <button class="xg-chip" data-filter="Needs Review" onclick="filterTable('Needs Review',this)">⚑ Review</button>
+                        <button class="xg-chip" data-filter="ai" onclick="filterTable('ai',this)">AI</button>
+                        <button class="xg-chip" data-filter="keyword" onclick="filterTable('keyword',this)">KW</button>
+                    </div>
+                    <input class="xg-search" id="xgSearch" type="text" placeholder="🔍  Search…" oninput="xgDoSearch(this.value)">
+                    <button class="xg-btn" onclick="xgUndoAll()" title="Undo all changes in this session">↩ Undo All</button>
+                    <button class="xg-btn xg-btn-primary" onclick="xgSaveAll()" id="xgSaveBtn" style="display:none">💾 Save All</button>
                 </div>
             </div>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Description</th>
-                            <th>Amount</th>
-                            <th>Category</th>
-                            <th>Confidence</th>
-                            <th>Method</th>
-                            <th>Status</th>
-                            <th style="width:60px"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultsTableBody"></tbody>
+
+            <!-- Category dropdown (portaled, shared) -->
+            <div id="xgCatDrop" class="xg-cat-drop" style="display:none">
+                <input class="xg-cat-search" id="xgCatSearch" type="text" placeholder="Type to filter…" autocomplete="off" oninput="xgCatSearchInput(this.value)">
+                <div class="xg-cat-list" id="xgCatList"></div>
+            </div>
+
+            <!-- Grid container -->
+            <div class="xg-wrap" id="xgWrap">
+                <table class="xg-table" id="xgTable" spellcheck="false">
+                    <thead id="xgHead"></thead>
+                    <tbody id="xgBody"></tbody>
                 </table>
+            </div>
+
+            <!-- Status bar (Excel-style) -->
+            <div class="xg-statusbar" id="xgStatusBar">
+                <span id="xgStatusLeft"></span>
+                <span id="xgStatusRight"></span>
             </div>
         </div>
     </div>
 
 </div>
+
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<!-- Correction Modal -->
-<div id="correctionModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1100;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
-    <div style="background:#0f1117;border:1px solid #1e2433;border-radius:16px;padding:1.75rem;width:100%;max-width:480px;position:relative">
-        <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:white;margin-bottom:0.25rem">Correct Classification</div>
-        <div id="corrModalDesc" style="color:#64748b;font-size:0.78rem;margin-bottom:1.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-
-        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">Current Category</label>
-        <div id="corrModalCurrent" style="margin:0.3rem 0 1rem;padding:0.5rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:#94a3b8;font-size:0.85rem"></div>
-
-        <label style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em">New Category <span style="color:#f87171">*</span></label>
-        <div style="position:relative;margin-top:0.3rem">
-            <input id="corrCategorySearch" type="text" placeholder="Search or type category..." autocomplete="off"
-                style="width:100%;padding:0.55rem 0.75rem;background:#171b27;border:1px solid #1e2433;border-radius:7px;color:white;font-size:0.85rem;box-sizing:border-box;outline:none"
-                oninput="filterCorrCategories(this.value)">
-            <div id="corrCategoryList" style="position:absolute;top:calc(100% + 4px);left:0;right:0;background:#0f1117;border:1px solid #1e2433;border-radius:8px;max-height:200px;overflow-y:auto;z-index:10;display:none"></div>
-        </div>
-        <input id="corrCategorySelected" type="hidden">
-
-        <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
-            <button onclick="closeCorrectionModal()" style="flex:1;padding:0.6rem;background:transparent;border:1px solid #1e2433;border-radius:8px;color:#64748b;font-family:'Syne',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer">Cancel</button>
-            <button onclick="submitCorrection()" style="flex:2;padding:0.6rem;background:#818cf8;border:none;border-radius:8px;color:white;font-family:'Syne',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer">Save Correction</button>
-        </div>
-    </div>
-</div>
 
 <script>
 const API = '/api';
@@ -2154,7 +2286,10 @@ async function runClassification() {
 
                 state.allResults  = msg.results;
                 state.lastRowCount = msg.stats.total;
-                renderResults(msg.results, msg.stats);
+                const fhash = msg.file_hash || XG.currentFileHash || '';
+                XG.currentFileHash = fhash;
+                renderResults(msg.results, msg.stats, fhash);
+                xgLoadOverrides(fhash);
                 _reportTiming(msg.stats.total, elapsedSec, mode);
 
                 setTimeout(() => {
@@ -2274,10 +2409,13 @@ function drawDonut(data, svgEl, legendEl) {
     svgEl.appendChild(sub);
 }
 
-function renderResults(results, stats) {
+function renderResults(results, stats, fileHash) {
     state.allResults = results;
     state.filteredResults = results;
     state.currentFilter = 'all';
+    // Set file hash for override persistence
+    if (fileHash) XG.currentFileHash = fileHash;
+    XG.columns = []; // reset columns so they rebuild from new data
 
     // ── Row 1 stats ──
     document.getElementById('statTotal').textContent = stats.total.toLocaleString();
@@ -2397,10 +2535,14 @@ function renderResults(results, stats) {
     // Reset filter to "all" when new results load
     state.currentFilter = 'all';
     state.searchQuery = '';
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    const allBtn = document.querySelector('.filter-btn[data-filter="all"]');
-    if (allBtn) allBtn.classList.add('active');
-    const searchEl = document.getElementById('searchInput');
+    XG.filterMode = 'all';
+    XG.searchQ = '';
+    XG.sortCol = null;
+    XG.columns = [];
+    document.querySelectorAll('.xg-chip').forEach(b => b.classList.remove('active'));
+    const allChip = document.querySelector('.xg-chip[data-filter="all"]');
+    if (allChip) allChip.classList.add('active');
+    const searchEl = document.getElementById('xgSearch');
     if (searchEl) searchEl.value = '';
     renderTable(results);
     renderAnalytics(results, stats);
@@ -2621,224 +2763,809 @@ function renderAnalytics(results, stats) {
 
 }
 
-function renderTable(results) {
-    const tbody = document.getElementById('resultsTableBody');
-    const display = results.slice(0, 500);
-    tbody.innerHTML = '';
+// ══════════════════════════════════════════════════════════════
+//  EXCEL-LIKE GRID ENGINE
+// ══════════════════════════════════════════════════════════════
 
-    display.forEach(row => {
-        const conf = parseFloat(row.Confidence) || 0;
-        const confPct = Math.round(conf * 100);
-        const confColor = conf >= 0.80 ? '#34d399' : conf >= 0.60 ? '#fbbf24' : '#f87171';
-        const catClass = getCatClass(row.Category || 'Other');
+// ── State ──────────────────────────────────────────────────────
+const XG = {
+    results:        [],    // working copy of rows (all)
+    filtered:       [],    // currently filtered/sorted rows
+    displayIndices: [],    // mapping: display row → allResults index
+    columns:        [],    // column definitions
+    focusR:        -1,    // focused row in filtered view
+    focusC:        -1,    // focused col index
+    editingR:      -1,
+    editingC:      -1,
+    sortCol:       null,
+    sortDir:       'asc',
+    changed:        {},    // { allResultsIndex: { colKey: newValue, ... } }
+    filterMode:    'all',
+    searchQ:       '',
+    catList:       [],     // master category list
+    dropActiveIdx:  -1,
+    currentFileHash: '',
+    PAGE_SIZE:      2000,  // render up to N rows
+};
 
-        let statusClass, statusLabel;
-        if (row.Status === 'Approved') {
-            statusClass = 'status-approved'; statusLabel = 'Approved';
-        } else if (conf < 0.4) {
-            statusClass = 'status-low'; statusLabel = 'Low Confidence';
-        } else {
-            statusClass = 'status-review'; statusLabel = 'Review';
+// ── Column definitions ─────────────────────────────────────────
+function xgBuildColumns(sampleRow) {
+    const keys = Object.keys(sampleRow);
+    const dateKey = keys.find(k => k.toLowerCase().includes('date')) || '';
+    const descKey = keys.find(k => ['description','narration','desc','particulars','details','merchant','remarks'].includes(k.toLowerCase())) || keys[0];
+    const amtKey  = keys.find(k => k.toLowerCase() === 'amount') || keys.find(k => ['debit','credit','withdrawal','deposit'].includes(k.toLowerCase())) || '';
+
+    const cols = [];
+    // Row number pseudo-col
+    cols.push({ key: '__row__', label: '#', width: '46px', editable: false, type: 'rownum' });
+
+    if (dateKey)     cols.push({ key: dateKey,      label: 'Date',        width: '90px',  editable: true,  type: 'date' });
+    if (descKey)     cols.push({ key: descKey,       label: 'Description', width: '260px', editable: true,  type: 'desc' });
+    if (amtKey)      cols.push({ key: amtKey,        label: 'Amount',      width: '100px', editable: false, type: 'amount', align:'right' });
+                     cols.push({ key: 'Category',    label: 'Category',    width: '180px', editable: true,  type: 'category' });
+                     cols.push({ key: 'Code',        label: 'Code',        width: '70px',  editable: false, type: 'code' });
+                     cols.push({ key: 'Confidence',  label: 'Conf',        width: '80px',  editable: false, type: 'conf' });
+                     cols.push({ key: 'Method',      label: 'Method',      width: '64px',  editable: false, type: 'method' });
+                     cols.push({ key: 'Status',      label: 'Status',      width: '90px',  editable: false, type: 'status' });
+                     cols.push({ key: 'GST_Flag',    label: 'GST',         width: '54px',  editable: true,  type: 'text' });
+                     cols.push({ key: 'TDS_Section', label: 'TDS',         width: '70px',  editable: true,  type: 'text' });
+                     cols.push({ key: 'BOE_Flag',    label: 'BOE',         width: '54px',  editable: true,  type: 'text' });
+    // Any extra original columns
+    const knownKeys = new Set(cols.map(c => c.key).concat(['__row__','Category','Confidence','Method','Status','Code','GST_Flag','TDS_Section','BOE_Flag', amtKey, dateKey, descKey]));
+    for (const k of keys) {
+        if (!knownKeys.has(k) && k !== 'Amount') {
+            cols.push({ key: k, label: k, width: '110px', editable: true, type: 'text' });
         }
-
-        const methodLabel = row.Method === 'ai' ? 'AI' : row.Method === 'keyword' ? 'KW' : '—';
-        const methodColor = row.Method === 'ai' ? '#818cf8' : row.Method === 'keyword' ? '#6ee7b7' : '#64748b';
-
-        const dateKey = Object.keys(row).find(k => k.toLowerCase().includes('date')) || '';
-        const descKey = Object.keys(row).find(k => ['description','narration','desc','particulars','details','merchant'].includes(k.toLowerCase())) || Object.keys(row)[0];
-        const amtKey  = Object.keys(row).find(k => k.toLowerCase() === 'amount') || '';
-
-        const dateVal = dateKey ? (row[dateKey] || '—') : '—';
-        const descVal = descKey ? (row[descKey] || '—') : '—';
-        const rawAmt  = amtKey && row[amtKey] != null ? parseFloat(row[amtKey]) : NaN;
-        const amtVal  = !isNaN(rawAmt)
-            ? `₹${rawAmt.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}`
-            : '—';
-
-        const rowIdx = display.indexOf(row);
-        tbody.innerHTML += `
-            <tr data-status="${row.Status}" data-method="${row.Method || ''}" id="txn-row-${rowIdx}">
-                <td style="color:var(--muted2);font-size:0.78rem;white-space:nowrap">${dateVal}</td>
-                <td class="td-desc" title="${descVal}">${descVal}</td>
-                <td class="td-amount">${amtVal}</td>
-                <td id="cat-cell-${rowIdx}"><span class="cat-badge ${catClass}">${row.Category || 'Other'}</span></td>
-                <td>
-                    <div class="conf-bar-wrap">
-                        <div class="conf-mini"><div class="conf-mini-fill" style="width:${confPct}%;background:${confColor}"></div></div>
-                        <span class="conf-pct" style="color:${confColor}">${confPct}%</span>
-                    </div>
-                </td>
-                <td><span style="font-size:0.72rem;font-weight:600;color:${methodColor}">${methodLabel}</span></td>
-                <td id="status-cell-${rowIdx}"><span class="status-badge ${statusClass}">${statusLabel}</span></td>
-                <td>
-                    <button onclick="openCorrectionEditor(${rowIdx}, '${(descVal||'').replace(/'/g,"\\'")}', '${(row.Category||'Other').replace(/'/g,"\\'")}', '${amtVal}')"
-                        title="Correct category"
-                        style="background:none;border:1px solid #1e2433;border-radius:6px;color:#64748b;padding:0.2rem 0.45rem;cursor:pointer;font-size:0.72rem;transition:all 0.15s"
-                        onmouseover="this.style.borderColor='#818cf8';this.style.color='#a5b4fc'"
-                        onmouseout="this.style.borderColor='#1e2433';this.style.color='#64748b'">
-                        ✏️
-                    </button>
-                </td>
-            </tr>`;
-    });
-
-    document.getElementById('tableCount').textContent =
-        display.length < results.length
-            ? `Showing ${display.length} of ${results.length.toLocaleString()}`
-            : `${results.length.toLocaleString()} total`;
+    }
+    return cols;
 }
 
-// ─── Inline Correction ──────────────────────────────────────────
-let _corrRowIdx = null;
-let _corrDesc = null;
-
-function openCorrectionEditor(rowIdx, desc, currentCat, amt) {
-    _corrRowIdx = rowIdx;
-    _corrDesc = desc;
-    document.getElementById('corrModalDesc').textContent = desc + (amt && amt !== '—' ? '  ·  ' + amt : '');
-    document.getElementById('corrModalCurrent').textContent = currentCat;
-    document.getElementById('corrCategorySearch').value = '';
-    document.getElementById('corrCategorySelected').value = '';
-    document.getElementById('corrCategoryList').style.display = 'none';
-
-    // Populate category list from loaded results
-    renderCorrCategories('');
-
-    const modal = document.getElementById('correctionModal');
-    modal.style.display = 'flex';
-    setTimeout(() => document.getElementById('corrCategorySearch').focus(), 100);
+// ── Category color palette ─────────────────────────────────────
+const CAT_COLORS = [
+    'rgba(110,231,183,0.12),#6ee7b7',
+    'rgba(129,140,248,0.12),#818cf8',
+    'rgba(251,191,36,0.12),#fbbf24',
+    'rgba(251,113,133,0.12),#fb7185',
+    'rgba(56,189,248,0.12),#38bdf8',
+    'rgba(167,139,250,0.12),#a78bfa',
+    'rgba(52,211,153,0.12),#34d399',
+    'rgba(253,164,104,0.12),#fda468',
+    'rgba(94,234,212,0.12),#5eead4',
+    'rgba(196,181,253,0.12),#c4b5fd',
+    'rgba(251,207,232,0.12),#fbcfe8',
+    'rgba(165,243,252,0.12),#a5f3fc',
+    'rgba(240,171,252,0.12),#f0abfc',
+    'rgba(134,239,172,0.12),#86efac',
+    'rgba(253,230,138,0.12),#fde68a',
+];
+const _catColorCache = {};
+let _catColorIdx = 0;
+function catColor(cat) {
+    if (!_catColorCache[cat]) {
+        _catColorCache[cat] = CAT_COLORS[_catColorIdx++ % CAT_COLORS.length];
+    }
+    return _catColorCache[cat];
 }
 
-function closeCorrectionModal() {
-    document.getElementById('correctionModal').style.display = 'none';
-    _corrRowIdx = null;
-    _corrDesc = null;
+// ── renderTable (called from renderResults) ───────────────────
+function renderTable(results) {
+    XG.results = results;
+    XG.changed  = {};
+    xgBuildCatList();
+    xgApplyFilter();
 }
 
-function getAllCategories() {
+function xgBuildCatList() {
     const cats = new Set();
     (state.allResults || []).forEach(r => { if (r.Category) cats.add(r.Category); });
-    // Also include any categories from the master if loaded
-    return Array.from(cats).sort();
+    XG.catList = Array.from(cats).sort();
 }
 
-function renderCorrCategories(query) {
-    const list = document.getElementById('corrCategoryList');
-    const cats = getAllCategories().filter(c => !query || c.toLowerCase().includes(query.toLowerCase()));
-    if (!cats.length) { list.style.display = 'none'; return; }
-    list.innerHTML = cats.map(c => `
-        <div onclick="selectCorrCategory('${c.replace(/'/g, "\'")}')"
-            style="padding:0.5rem 0.75rem;cursor:pointer;color:#e2e8f0;font-size:0.82rem;border-bottom:1px solid #1e2433;transition:background 0.1s"
-            onmouseover="this.style.background='#171b27'" onmouseout="this.style.background='transparent'">
-            ${c}
-        </div>`).join('');
-    list.style.display = 'block';
+function xgApplyFilter() {
+    let src = XG.results;
+    const f = XG.filterMode;
+    if (f === 'Approved')     src = src.filter(r => r.Status === 'Approved');
+    else if (f === 'Needs Review') src = src.filter(r => r.Status !== 'Approved');
+    else if (f === 'ai')      src = src.filter(r => r.Method === 'ai');
+    else if (f === 'keyword') src = src.filter(r => r.Method === 'keyword');
+
+    const q = XG.searchQ.toLowerCase();
+    if (q) {
+        src = src.filter(r => {
+            return Object.values(r).some(v => v && String(v).toLowerCase().includes(q));
+        });
+    }
+    if (XG.sortCol) {
+        const col = XG.sortCol;
+        const dir = XG.sortDir === 'asc' ? 1 : -1;
+        src = [...src].sort((a,b) => {
+            let av = a[col] ?? '', bv = b[col] ?? '';
+            const an = parseFloat(av), bn = parseFloat(bv);
+            if (!isNaN(an) && !isNaN(bn)) return (an - bn) * dir;
+            return String(av).localeCompare(String(bv)) * dir;
+        });
+    }
+
+    // Map back to original indices
+    XG.filtered = src.slice(0, XG.PAGE_SIZE);
+    XG.displayIndices = XG.filtered.map(row => XG.results.indexOf(row));
+
+    xgRenderGrid();
+    xgUpdateCount();
 }
 
-function filterCorrCategories(query) {
-    renderCorrCategories(query);
-    document.getElementById('corrCategorySelected').value = '';
+function xgRenderGrid() {
+    const rows = XG.filtered;
+    if (!rows.length) {
+        document.getElementById('xgBody').innerHTML = `<tr><td colspan="99" style="text-align:center;padding:3rem;color:var(--muted)">No transactions match</td></tr>`;
+        document.getElementById('xgHead').innerHTML = '';
+        xgUpdateStatus();
+        return;
+    }
+
+    // Build columns from first row
+    if (!XG.columns.length || XG.columns.length < 3) {
+        XG.columns = xgBuildColumns(rows[0]);
+    }
+
+    xgRenderHead();
+    xgRenderBody();
+    xgUpdateStatus();
 }
 
-function selectCorrCategory(cat) {
-    document.getElementById('corrCategorySearch').value = cat;
-    document.getElementById('corrCategorySelected').value = cat;
-    document.getElementById('corrCategoryList').style.display = 'none';
+function xgRenderHead() {
+    const cols = XG.columns;
+
+    // Build colgroup for column widths
+    const table = document.getElementById('xgTable');
+    let cg = table.querySelector('colgroup');
+    if (!cg) { cg = document.createElement('colgroup'); table.prepend(cg); }
+    cg.innerHTML = cols.map(c => `<col style="width:${c.width};min-width:${c.width}">`).join('');
+
+    let html = '<tr>';
+    cols.forEach((col, ci) => {
+        if (col.type === 'rownum') {
+            html += `<th style="cursor:default">#</th>`;
+            return;
+        }
+        const isSort = XG.sortCol === col.key;
+        const arrow = isSort ? (XG.sortDir === 'asc' ? '▲' : '▼') : '▲';
+        const cls = isSort ? (XG.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc') : '';
+        const align = col.align ? `;text-align:${col.align}` : '';
+        html += `<th class="${cls}" style="white-space:nowrap${align}" onclick="xgSort('${col.key}')">
+            ${col.label}<span class="sort-arrow">${arrow}</span>
+        </th>`;
+    });
+    html += '</tr>';
+    document.getElementById('xgHead').innerHTML = html;
 }
 
-// Close dropdown when clicking outside
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('#corrCategorySearch') && !e.target.closest('#corrCategoryList')) {
-        const list = document.getElementById('corrCategoryList');
-        if (list) list.style.display = 'none';
+function xgRenderBody() {
+    const cols = XG.columns;
+    const rows = XG.filtered;
+    let html = '';
+    rows.forEach((row, ri) => {
+        const origIdx = XG.displayIndices[ri];
+        const isEdited = XG.changed[origIdx] && Object.keys(XG.changed[origIdx]).length > 0;
+        html += `<tr class="${isEdited ? 'xg-row-edited' : ''}" data-ri="${ri}" data-oi="${origIdx}" onclick="xgRowClick(event,${ri})">`;
+        cols.forEach((col, ci) => {
+            html += xgRenderCell(row, col, ci, ri, origIdx, isEdited);
+        });
+        html += '</tr>';
+    });
+    document.getElementById('xgBody').innerHTML = html;
+    xgAttachCellEvents();
+}
+
+function xgRenderCell(row, col, ci, ri, origIdx, isEdited) {
+    if (col.type === 'rownum') {
+        return `<td data-ci="${ci}" data-ri="${ri}" data-oi="${origIdx}" data-key="__row__" data-type="rownum"><div class="xg-cell-inner" style="justify-content:center">${ri + 1}</div></td>`;
+    }
+
+    const val = row[col.key] ?? '';
+    const editClass = col.editable ? ' xg-editable' : '';
+    const changedClass = (XG.changed[origIdx] && XG.changed[origIdx][col.key] !== undefined) ? ' xg-cell-changed' : '';
+
+    let inner = '';
+    switch (col.type) {
+        case 'date':
+            inner = `<div class="xg-cell-inner xg-val-date">${val || '—'}</div>`; break;
+        case 'desc':
+            inner = `<div class="xg-cell-inner xg-val-desc" title="${_esc(val)}">${_esc(val) || '—'}</div>`; break;
+        case 'amount': {
+            const num = parseFloat(String(val).replace(/[,₹$]/g, ''));
+            const fmt = isNaN(num) ? (val || '—') : '₹' + Math.abs(num).toLocaleString('en-IN', {minimumFractionDigits:0,maximumFractionDigits:2});
+            const neg = !isNaN(num) && num < 0;
+            inner = `<div class="xg-cell-inner xg-val-amount ${neg?'neg':''}" style="justify-content:flex-end">${fmt}</div>`; break;
+        }
+        case 'category': {
+            const cc = catColor(val);
+            const [bg, fg] = cc.split(',');
+            const corrected = row.Method === 'corrected';
+            inner = `<div class="xg-cell-inner" style="gap:0.3rem">
+                <span class="xg-cat-badge" style="background:${bg};color:${fg}">${_esc(val) || '—'}</span>
+                ${corrected ? '<span style="font-size:0.6rem;color:#34d399">✓</span>' : ''}
+            </div>`; break;
+        }
+        case 'conf': {
+            const conf = parseFloat(val) || 0;
+            const pct = Math.round(conf * 100);
+            const color = conf >= 0.8 ? '#34d399' : conf >= 0.6 ? '#fbbf24' : '#f87171';
+            inner = `<div class="xg-cell-inner">
+                <div class="xg-conf-wrap">
+                    <div class="xg-conf-bar"><div class="xg-conf-fill" style="width:${pct}%;background:${color}"></div></div>
+                    <span class="xg-conf-pct" style="color:${color}">${pct}%</span>
+                </div>
+            </div>`; break;
+        }
+        case 'method': {
+            const ml = val === 'ai' ? 'AI' : val === 'keyword' ? 'KW' : val === 'corrected' ? '✎' : val || '—';
+            const mc = val === 'ai' ? 'xg-method-ai' : val === 'keyword' ? 'xg-method-kw' : val === 'corrected' ? 'xg-method-cor' : '';
+            inner = `<div class="xg-cell-inner"><span class="xg-method ${mc}">${ml}</span></div>`; break;
+        }
+        case 'status': {
+            const sc = val === 'Approved' ? 'xg-status-ok' : (parseFloat(row.Confidence)||0) < 0.4 ? 'xg-status-low' : 'xg-status-rev';
+            const sl = val === 'Approved' ? 'Approved' : (parseFloat(row.Confidence)||0) < 0.4 ? 'Low Conf' : 'Review';
+            inner = `<div class="xg-cell-inner"><span class="xg-status ${sc}">${sl}</span></div>`; break;
+        }
+        case 'code':
+            inner = `<div class="xg-cell-inner xg-val-code">${_esc(val)}</div>`; break;
+        default:
+            inner = `<div class="xg-cell-inner" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(val)}</div>`;
+    }
+
+    return `<td class="${editClass}${changedClass}" data-ci="${ci}" data-ri="${ri}" data-oi="${origIdx}" data-key="${col.key}" data-type="${col.type}">${inner}</td>`;
+}
+
+function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function xgAttachCellEvents() {
+    // Attach on the persistent scroll wrapper so listeners survive tbody re-renders
+    const wrap = document.getElementById('xgWrap');
+    if (wrap && !wrap._xgListenersAttached) {
+        wrap.addEventListener('click', xgHandleClick);
+        wrap.addEventListener('dblclick', xgHandleDblClick);
+        wrap._xgListenersAttached = true;
+    }
+}
+
+// ── Keyboard navigation ────────────────────────────────────────
+document.addEventListener('keydown', xgKeyDown, true);
+
+function xgKeyDown(e) {
+    // Don't intercept when typing in toolbar search or cat search
+    if (e.target.classList.contains('xg-search') || e.target.classList.contains('xg-cat-search') || e.target.classList.contains('xg-inline-input')) return;
+    if (!document.getElementById('xgPanel') || document.getElementById('xgPanel').style.display === 'none') return;
+    if (XG.focusR < 0) return;
+
+    const drop = document.getElementById('xgCatDrop');
+    const dropVisible = drop && drop.style.display !== 'none';
+
+    if (dropVisible) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); xgCatDropMove(1); return; }
+        if (e.key === 'ArrowUp')   { e.preventDefault(); xgCatDropMove(-1); return; }
+        if (e.key === 'Enter')     { e.preventDefault(); xgCatDropSelect(); return; }
+        if (e.key === 'Escape')    { e.preventDefault(); xgCloseDrop(); return; }
+        return;
+    }
+
+    const cols = XG.columns;
+    const nRows = XG.filtered.length;
+    const nCols = cols.length;
+
+    const move = (dr, dc) => {
+        xgStopEdit();
+        let r = XG.focusR + dr;
+        let c = XG.focusC + dc;
+        if (r < 0) r = 0;
+        if (r >= nRows) r = nRows - 1;
+        if (c < 1) c = 1; // skip row-num col
+        if (c >= nCols) c = nCols - 1;
+        xgFocusCell(r, c);
+    };
+
+    switch (e.key) {
+        case 'ArrowUp':    e.preventDefault(); move(-1, 0); break;
+        case 'ArrowDown':  e.preventDefault(); move(1, 0); break;
+        case 'ArrowLeft':  if (XG.editingR < 0) { e.preventDefault(); move(0, -1); } break;
+        case 'ArrowRight': if (XG.editingR < 0) { e.preventDefault(); move(0, 1); } break;
+        case 'Tab':
+            e.preventDefault();
+            xgStopEdit(true);
+            move(0, e.shiftKey ? -1 : 1);
+            break;
+        case 'Enter':
+            e.preventDefault();
+            if (XG.editingR >= 0) { xgStopEdit(true); move(1, 0); }
+            else { xgStartEdit(XG.focusR, XG.focusC); }
+            break;
+        case 'Escape':
+            if (XG.editingR >= 0) { xgStopEdit(false); }
+            break;
+        case 'F2':
+            e.preventDefault(); xgStartEdit(XG.focusR, XG.focusC); break;
+        case 'Delete':
+        case 'Backspace':
+            if (XG.editingR < 0) {
+                e.preventDefault();
+                xgStartEdit(XG.focusR, XG.focusC, '');
+            }
+            break;
+        default:
+            // Start typing to edit
+            if (XG.editingR < 0 && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const col = cols[XG.focusC];
+                if (col && col.editable) {
+                    xgStartEdit(XG.focusR, XG.focusC, e.key);
+                    e.preventDefault();
+                }
+            }
+    }
+}
+
+// ── Click / DblClick handlers ──────────────────────────────────
+function xgHandleClick(e) {
+    const td = e.target.closest('td[data-ci]');
+    if (!td) return;
+    const ri = +td.dataset.ri;
+    const ci = +td.dataset.ci;
+    xgFocusCell(ri, ci);
+}
+
+function xgHandleDblClick(e) {
+    const td = e.target.closest('td[data-ci]');
+    if (!td) return;
+    const ri = +td.dataset.ri;
+    const ci = +td.dataset.ci;
+    xgStartEdit(ri, ci);
+}
+
+function xgRowClick(e, ri) { /* handled by xgHandleClick */ }
+
+function xgFocusCell(ri, ci) {
+    // Skip rownum column
+    if (ci === 0) ci = 1;
+
+    // Clear previous focus
+    document.querySelectorAll('.xg-cell-focus').forEach(el => el.classList.remove('xg-cell-focus'));
+    document.querySelectorAll('.xg-row-selected').forEach(el => el.classList.remove('xg-row-selected'));
+
+    XG.focusR = ri;
+    XG.focusC = ci;
+
+    const td = _getTd(ri, ci);
+    if (td) {
+        td.classList.add('xg-cell-focus');
+        td.closest('tr')?.classList.add('xg-row-selected');
+        // Scroll into view
+        td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+    xgUpdateStatus();
+}
+
+function _getTd(ri, ci) {
+    return document.querySelector(`#xgBody td[data-ri="${ri}"][data-ci="${ci}"]`);
+}
+
+// ── Edit mode ─────────────────────────────────────────────────
+// Store the pre-edit value so cancel can restore correctly
+XG._editOrigVal = null;
+
+function xgStartEdit(ri, ci, initVal) {
+    const col = XG.columns[ci];
+    if (!col || !col.editable) return;
+
+    const td = _getTd(ri, ci);
+    if (!td) return;
+
+    xgStopEdit(false); // stop any previous without saving
+
+    XG.editingR = ri;
+    XG.editingC = ci;
+    td.classList.add('xg-cell-editing');
+    td.classList.remove('xg-cell-focus');
+
+    const row = XG.filtered[ri];
+    const origVal = row[col.key] ?? '';
+    XG._editOrigVal = origVal; // save for cancel
+
+    if (col.type === 'category') {
+        // Show dropdown
+        td.querySelector('.xg-cell-inner').innerHTML = `<input class="xg-inline-input" id="xgEditInput" value="${_esc(initVal !== undefined ? initVal : origVal)}" autocomplete="off">`;
+        const input = document.getElementById('xgEditInput');
+        input.focus();
+        if (initVal !== undefined) { input.value = initVal; input.select(); }
+        else { input.select(); }
+        input.addEventListener('input', () => xgOpenCatDrop(input.value, td));
+        input.addEventListener('keydown', xgInputKeyDown);
+        xgOpenCatDrop(input.value, td);
+    } else {
+        const v = initVal !== undefined ? initVal : origVal;
+        td.querySelector('.xg-cell-inner').innerHTML = `<input class="xg-inline-input" id="xgEditInput" value="${_esc(v)}" autocomplete="off">`;
+        const input = document.getElementById('xgEditInput');
+        input.focus();
+        if (initVal !== undefined) { input.value = initVal; }
+        input.select();
+        input.addEventListener('blur', () => xgStopEdit(true));
+        input.addEventListener('keydown', xgInputKeyDown);
+    }
+}
+
+function xgInputKeyDown(e) {
+    if (e.key === 'Enter')  { e.preventDefault(); e.stopPropagation(); xgStopEdit(true); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); xgStopEdit(false); }
+    if (e.key === 'Tab')    { e.preventDefault(); e.stopPropagation();
+        xgStopEdit(true);
+        const move = (dr, dc) => { let r=XG.focusR+dr, c=XG.focusC+dc;
+            if (c>=XG.columns.length){c=1;r++;}if(c<1)c=1;if(r>=XG.filtered.length)r=XG.filtered.length-1;
+            xgFocusCell(r,c); };
+        move(0, e.shiftKey ? -1 : 1);
+    }
+}
+
+function xgStopEdit(save) {
+    if (XG.editingR < 0) return;
+    const ri = XG.editingR, ci = XG.editingC;
+    XG.editingR = -1; XG.editingC = -1;
+    xgCloseDrop();
+
+    const col = XG.columns[ci];
+    const td  = _getTd(ri, ci);
+    const row = XG.filtered[ri];
+    const origIdx = XG.displayIndices[ri];
+    const input = document.getElementById('xgEditInput');
+    const newVal = input ? input.value.trim() : null;
+    const origVal = XG._editOrigVal !== null ? XG._editOrigVal : (row[col.key] ?? '');
+    XG._editOrigVal = null;
+
+    if (save && newVal !== null && newVal !== origVal && newVal !== '') {
+        // Record change
+        if (!XG.changed[origIdx]) XG.changed[origIdx] = {};
+        XG.changed[origIdx][col.key] = { oldVal: origVal, newVal };
+        // Update working copy
+        XG.filtered[ri][col.key] = newVal;
+        XG.results[origIdx][col.key] = newVal;
+        // Auto-update Status for category edits
+        if (col.key === 'Category') {
+            XG.filtered[ri].Status = 'Approved';
+            XG.results[origIdx].Status = 'Approved';
+            XG.filtered[ri].Method = 'corrected';
+            XG.results[origIdx].Method = 'corrected';
+        }
+        xgMarkUnsaved();
+        // Auto-save this cell immediately
+        xgAutoSaveCell(origIdx, ri, col, origVal, newVal);
+    }
+
+    // Re-render just this row
+    if (td) {
+        td.classList.remove('xg-cell-editing');
+        xgRefreshRow(ri);
+        xgFocusCell(ri, ci);
+    }
+}
+
+function xgRefreshRow(ri) {
+    const tr = document.querySelector(`#xgBody tr[data-ri="${ri}"]`);
+    if (!tr) return;
+    const row     = XG.filtered[ri];
+    const origIdx = XG.displayIndices[ri];
+    const isEdited = XG.changed[origIdx] && Object.keys(XG.changed[origIdx]).length > 0;
+    tr.className  = isEdited ? 'xg-row-edited' : '';
+    tr.dataset.ri = ri;
+    tr.dataset.oi = origIdx;
+
+    // Parse fresh cell HTML via a temp <table> so we get real DOM nodes
+    const tmpHtml = `<table><tbody><tr>${XG.columns.map((col,ci) => xgRenderCell(row,col,ci,ri,origIdx,isEdited)).join('')}</tr></tbody></table>`;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = tmpHtml;
+    const freshTds = tmp.querySelectorAll('td');
+    const existingTds = tr.querySelectorAll('td');
+    freshTds.forEach((freshTd, ci) => {
+        if (existingTds[ci]) {
+            existingTds[ci].className   = freshTd.className;
+            existingTds[ci].innerHTML   = freshTd.innerHTML;
+            // Copy data attributes
+            for (const attr of freshTd.attributes) {
+                existingTds[ci].setAttribute(attr.name, attr.value);
+            }
+        }
+    });
+}
+
+// ── Category dropdown ──────────────────────────────────────────
+function xgOpenCatDrop(query, anchorTd) {
+    const drop = document.getElementById('xgCatDrop');
+    const search = document.getElementById('xgCatSearch');
+    const list = document.getElementById('xgCatList');
+
+    search.value = query;
+    XG.dropActiveIdx = -1;
+
+    const cats = query
+        ? XG.catList.filter(c => c.toLowerCase().includes(query.toLowerCase()))
+        : XG.catList;
+
+    if (!cats.length) { drop.style.display = 'none'; return; }
+
+    list.innerHTML = cats.map((c, i) =>
+        `<div class="xg-cat-item" data-idx="${i}" data-cat="${_esc(c)}" onclick="xgCatDropPick('${c.replace(/'/g,"\\'")}')">
+            ${_esc(c)}
+        </div>`
+    ).join('');
+
+    // Position the dropdown below / above the anchor cell
+    const rect = anchorTd.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    drop.style.display = 'block';
+    drop.style.minWidth = Math.max(rect.width, 220) + 'px';
+    drop.style.left = rect.left + 'px';
+    if (spaceBelow > 220) {
+        drop.style.top = (rect.bottom + 2) + 'px';
+        drop.style.bottom = 'auto';
+    } else {
+        drop.style.bottom = (window.innerHeight - rect.top + 2) + 'px';
+        drop.style.top = 'auto';
+    }
+}
+
+function xgCloseDrop() {
+    const drop = document.getElementById('xgCatDrop');
+    if (drop) drop.style.display = 'none';
+    XG.dropActiveIdx = -1;
+}
+
+function xgCatDropMove(dir) {
+    const items = document.querySelectorAll('#xgCatList .xg-cat-item');
+    if (!items.length) return;
+    items[XG.dropActiveIdx]?.classList.remove('xg-cat-active');
+    XG.dropActiveIdx = Math.max(0, Math.min(items.length - 1, XG.dropActiveIdx + dir));
+    items[XG.dropActiveIdx]?.classList.add('xg-cat-active');
+    items[XG.dropActiveIdx]?.scrollIntoView({ block: 'nearest' });
+}
+
+function xgCatDropSelect() {
+    const items = document.querySelectorAll('#xgCatList .xg-cat-item');
+    const active = XG.dropActiveIdx >= 0 ? items[XG.dropActiveIdx] : items[0];
+    if (active) { xgCatDropPick(active.dataset.cat); return; }
+    // Use whatever is typed in input
+    const input = document.getElementById('xgEditInput');
+    if (input && input.value.trim()) {
+        xgCloseDrop();
+        xgStopEdit(true);
+    }
+}
+
+function xgCatDropPick(cat) {
+    const input = document.getElementById('xgEditInput');
+    if (input) input.value = cat;
+    xgCloseDrop();
+    xgStopEdit(true);
+}
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('#xgCatDrop') && !e.target.closest('#xgEditInput')) {
+        xgCloseDrop();
     }
 });
 
-async function submitCorrection() {
-    const cat = document.getElementById('corrCategorySelected').value || document.getElementById('corrCategorySearch').value.trim();
-    if (!cat) { toast('Please select or type a category', 'error'); return; }
-    if (!_corrDesc) { closeCorrectionModal(); return; }
+// ── Cat-drop live filter ───────────────────────────────────────
+// xgCatSearch input handler (delegated via oninput on the element itself)
+function xgCatSearchInput(val) {
+    const td = XG.editingR >= 0 ? _getTd(XG.editingR, XG.editingC) : null;
+    if (td) xgOpenCatDrop(val, td);
+}
+
+// ── Sorting ────────────────────────────────────────────────────
+function xgSort(key) {
+    if (XG.sortCol === key) {
+        XG.sortDir = XG.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        XG.sortCol = key; XG.sortDir = 'asc';
+    }
+    xgApplyFilter();
+}
+
+// ── Filters ────────────────────────────────────────────────────
+function filterTable(filter, btn) {
+    document.querySelectorAll('.xg-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    XG.filterMode = filter;
+    xgApplyFilter();
+}
+
+function xgDoSearch(q) {
+    XG.searchQ = q;
+    xgApplyFilter();
+}
+
+function searchTable(q) { xgDoSearch(q); } // legacy shim
+
+// ── Count & Status ─────────────────────────────────────────────
+function xgUpdateCount() {
+    const el = document.getElementById('tableCount');
+    if (!el) return;
+    const tot = (state.allResults || []).length;
+    const vis = XG.filtered.length;
+    el.textContent = vis < tot ? `${vis.toLocaleString()} of ${tot.toLocaleString()} transactions` : `${tot.toLocaleString()} transactions`;
+}
+
+function xgUpdateStatus() {
+    const ri = XG.focusR, ci = XG.focusC;
+    const leftEl  = document.getElementById('xgStatusLeft');
+    const rightEl = document.getElementById('xgStatusRight');
+    if (!leftEl) return;
+
+    if (ri < 0 || !XG.filtered.length) {
+        leftEl.textContent  = `${XG.filtered.length} rows`;
+        rightEl.textContent = 'Click a cell to select  ·  F2 or double-click to edit  ·  ↑↓←→ to navigate';
+        return;
+    }
+    const row = XG.filtered[ri];
+    const col = XG.columns[ci];
+    if (!row || !col) return;
+
+    const editHint = col.editable
+        ? (col.type === 'category' ? 'F2 / double-click to pick category  ·  type to filter' : 'F2 / double-click to edit  ·  Enter to confirm  ·  Esc to cancel')
+        : '(read-only)';
+
+    leftEl.textContent  = col.type !== 'rownum'
+        ? `Row ${ri + 1}  ·  ${col.label}${row.Category ? '  |  ' + row.Category : ''}`
+        : `Row ${ri + 1}`;
+    rightEl.textContent = `↑↓←→ navigate  ·  Tab next  ·  ${editHint}`;
+}
+
+function xgMarkUnsaved() {
+    const el = document.getElementById('xgUnsaved');
+    if (el) el.style.display = '';
+    const btn = document.getElementById('xgSaveBtn');
+    if (btn) btn.style.display = '';
+}
+
+// ── Auto-save cell on edit ─────────────────────────────────────
+async function xgAutoSaveCell(origIdx, ri, col, oldVal, newVal) {
+    const row = XG.results[origIdx];
+    const descKey = XG.columns.find(c => c.type === 'desc')?.key;
+    const desc = descKey ? row[descKey] : '';
+    const fh = XG.currentFileHash;
 
     try {
-        const res = await fetch(`${API}/update-classification`, {
+        await fetch(`${API}/update-classification`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ description: _corrDesc, category: cat })
+            body: JSON.stringify({
+                field_name:  col.key,
+                new_value:   newVal,
+                old_value:   oldVal,
+                row_index:   origIdx,
+                file_hash:   fh,
+                description: desc,
+                category:    col.key === 'Category' ? newVal : row.Category,
+            })
         });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error || 'Failed');
-
-        // Update the in-memory results
-        const rowIdx = _corrRowIdx;
-        if (state.allResults && state.allResults[rowIdx]) {
-            state.allResults[rowIdx].Category = cat;
-            state.allResults[rowIdx].Status = 'Approved';
-            state.allResults[rowIdx].Method = 'corrected';
+        // For category changes, update also in state.allResults
+        if (state.allResults && state.allResults[origIdx]) {
+            state.allResults[origIdx][col.key] = newVal;
+            if (col.key === 'Category') {
+                state.allResults[origIdx].Status = 'Approved';
+                state.allResults[origIdx].Method = 'corrected';
+            }
         }
-
-        // Update the DOM cell directly
-        const catCell = document.getElementById(`cat-cell-${rowIdx}`);
-        const statusCell = document.getElementById(`status-cell-${rowIdx}`);
-        if (catCell) {
-            catCell.innerHTML = `<span class="cat-badge" style="background:rgba(52,211,153,0.1);color:#34d399;border-color:rgba(52,211,153,0.25)">${cat}</span>
-                <span style="font-size:0.65rem;color:#34d399;display:block;margin-top:2px;font-weight:600">✓ Corrected</span>`;
-        }
-        if (statusCell) {
-            statusCell.innerHTML = `<span class="status-badge status-approved">Approved</span>`;
-        }
-
-        toast(`Saved — future "${_corrDesc.slice(0,30)}…" transactions will auto-classify as "${cat}"`, 'success');
-        closeCorrectionModal();
     } catch (err) {
-        toast('Could not save correction: ' + err.message, 'error');
+        console.warn('Auto-save failed:', err);
     }
 }
 
-// Close modal on backdrop click
-document.getElementById('correctionModal').addEventListener('click', function(e) {
-    if (e.target === this) closeCorrectionModal();
-});
+// ── Save All ───────────────────────────────────────────────────
+async function xgSaveAll() {
+    const btn = document.getElementById('xgSaveBtn');
+    if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
 
-// ─── Filters ───────────────────────────────────────────────────
-function filterTable(filter, btn) {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    state.currentFilter = filter;
-    applyFilters();
+    const promises = [];
+    for (const [origIdx, changes] of Object.entries(XG.changed)) {
+        const row = XG.results[+origIdx];
+        const descKey = XG.columns.find(c => c.type === 'desc')?.key;
+        const desc = descKey ? row[descKey] : '';
+        for (const [key, { oldVal, newVal }] of Object.entries(changes)) {
+            promises.push(fetch(`${API}/update-classification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    field_name: key, new_value: newVal, old_value: oldVal,
+                    row_index: +origIdx, file_hash: XG.currentFileHash,
+                    description: desc, category: key === 'Category' ? newVal : row.Category,
+                })
+            }));
+        }
+    }
+    await Promise.allSettled(promises);
+
+    if (btn) { btn.textContent = '✓ Saved'; btn.disabled = false; }
+    const el = document.getElementById('xgUnsaved');
+    if (el) el.style.display = 'none';
+    toast(`Saved ${promises.length} change${promises.length !== 1 ? 's' : ''}`, 'success');
+    setTimeout(() => { if (btn) btn.style.display = 'none'; }, 1500);
 }
 
-function searchTable(query) {
-    state.searchQuery = query.toLowerCase();
-    applyFilters();
+// ── Undo All ───────────────────────────────────────────────────
+function xgUndoAll() {
+    if (!Object.keys(XG.changed).length) { toast('Nothing to undo', ''); return; }
+    for (const [origIdx, changes] of Object.entries(XG.changed)) {
+        for (const [key, { oldVal }] of Object.entries(changes)) {
+            XG.results[+origIdx][key] = oldVal;
+            if (state.allResults && state.allResults[+origIdx]) {
+                state.allResults[+origIdx][key] = oldVal;
+            }
+        }
+    }
+    XG.changed = {};
+    document.getElementById('xgUnsaved').style.display = 'none';
+    document.getElementById('xgSaveBtn').style.display  = 'none';
+    xgApplyFilter();
+    toast('All changes undone', '');
 }
 
-function applyFilters() {
-    let filtered = state.allResults || [];
-    const filter = state.currentFilter || 'all';
-    const q = state.searchQuery || '';
+// ── Load saved overrides from server ──────────────────────────
+async function xgLoadOverrides(fileHash) {
+    if (!fileHash) return;
+    try {
+        const res = await fetch(`${API}/overrides?file_hash=${encodeURIComponent(fileHash)}`, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.overrides || !data.overrides.length) return;
 
-    if (filter === 'Approved') filtered = filtered.filter(r => r.Status === 'Approved');
-    else if (filter === 'Needs Review') filtered = filtered.filter(r => r.Status !== 'Approved');
-    else if (filter === 'ai') filtered = filtered.filter(r => r.Method === 'ai');
-    else if (filter === 'keyword') filtered = filtered.filter(r => r.Method === 'keyword');
-
-    if (q) {
-        filtered = filtered.filter(r => {
-            const descKey = Object.keys(r).find(k => ['description','narration','desc','particulars'].includes(k.toLowerCase())) || '';
-            const desc = descKey ? (r[descKey] || '') : '';
-            return desc.toLowerCase().includes(q) || (r.Category || '').toLowerCase().includes(q);
+        let count = 0;
+        data.overrides.forEach(ov => {
+            const row = state.allResults && state.allResults[ov.row_index];
+            if (!row) return;
+            row[ov.field_name] = ov.new_value;
+            if (ov.field_name === 'Category') {
+                row.Status = 'Approved';
+                row.Method = 'corrected';
+            }
+            count++;
         });
-    }
-
-    renderTable(filtered);
-    document.getElementById('tableCount').textContent = `${filtered.length.toLocaleString()} of ${(state.allResults||[]).length.toLocaleString()} transactions`;
+        if (count > 0) {
+            // Re-sync working copy and re-render
+            XG.results = state.allResults;
+            xgApplyFilter();
+            toast(`↩ Restored ${count} saved edit${count !== 1 ? 's' : ''}`, 'success');
+        }
+    } catch (e) { console.warn('Could not load overrides:', e); }
 }
+
+
 
 // ─── Download ──────────────────────────────────────────────────
 function downloadResults(e) {
     e.preventDefault();
-    window.location.href = `${API}/download-results`;
+    // Export current in-memory state (includes all edits) as CSV
+    const rows = state.allResults;
+    if (!rows || !rows.length) {
+        // Fall back to server file if no in-memory results
+        window.location.href = `${API}/download-results`;
+        return;
+    }
+    // Build CSV from current (edited) results
+    const keys = Object.keys(rows[0]);
+    const escape = v => {
+        const s = String(v == null ? '' : v);
+        return s.includes(',') || s.includes('"') || s.includes('\n')
+            ? '"' + s.replace(/"/g, '""') + '"'
+            : s;
+    };
+    const lines = [keys.join(',')];
+    rows.forEach(r => lines.push(keys.map(k => escape(r[k])).join(',')));
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'classified_transactions.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
 }
 
 // ─── Toast ─────────────────────────────────────────────────────
@@ -2997,7 +3724,15 @@ async function loadCachedResults() {
         if (!data.success) throw new Error(data.error || 'Failed to load cached results');
 
         document.getElementById('cachedBanner').style.display = 'none';
-        _displayResults(data.results, data.stats);
+        // Get file hash from current upload hash store
+        const fh = data.file_hash || XG.currentFileHash || '';
+        if (fh) XG.currentFileHash = fh;
+        state.allResults = data.results;
+        renderResults(data.results, data.stats, fh);
+        xgLoadOverrides(fh);
+        const area = document.getElementById('resultsArea');
+        area.classList.add('visible');
+        area.scrollIntoView({ behavior: 'smooth', block: 'start' });
         toast('Previous results loaded ✓', 'success');
     } catch (err) {
         toast(err.message, 'error');

@@ -99,6 +99,52 @@ def init_db():
             output_csv TEXT,
             created_at TIMESTAMPTZ DEFAULT NOW()
         );""")
+    # Per-transaction overrides — stores any cell edit a user makes
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS transaction_overrides (
+            id            SERIAL PRIMARY KEY,
+            user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            file_hash     TEXT NOT NULL,
+            row_index     INTEGER NOT NULL,
+            description   TEXT,
+            field_name    TEXT NOT NULL,
+            old_value     TEXT,
+            new_value     TEXT NOT NULL,
+            updated_at    TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE (user_id, file_hash, row_index, field_name)
+        );""")
+    # Vendor memory in DB (per-user) — mirrors vendor_memory.json but persisted
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS vendor_memory (
+            id          SERIAL PRIMARY KEY,
+            user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            vendor_key  TEXT NOT NULL,
+            category    TEXT NOT NULL,
+            updated_at  TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE (user_id, vendor_key)
+        );""")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS transaction_overrides (
+            id            SERIAL PRIMARY KEY,
+            user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            file_hash     TEXT NOT NULL,
+            row_index     INTEGER NOT NULL,
+            description   TEXT,
+            field_name    TEXT NOT NULL,
+            old_value     TEXT,
+            new_value     TEXT NOT NULL,
+            updated_at    TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE (user_id, file_hash, row_index, field_name)
+        );""")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS vendor_memory (
+            id          SERIAL PRIMARY KEY,
+            user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            vendor_key  TEXT NOT NULL,
+            category    TEXT NOT NULL,
+            updated_at  TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE (user_id, vendor_key)
+        );""")
     conn.commit(); cur.close(); conn.close()
     print("✅ DB tables ready")
     _load_master_into_classifier()
@@ -583,7 +629,7 @@ def load_cached():
         cached = cur.fetchone(); cur.close(); conn.close()
         if not cached: return jsonify({'error': 'No cached results found'}), 404
         return jsonify({'success': True, 'results': json.loads(cached['results_json']),
-                        'stats': json.loads(cached['stats_json']), 'from_cache': True})
+                        'stats': json.loads(cached['stats_json']), 'from_cache': True, 'file_hash': fhash})
     except Exception as e: return jsonify({'error': str(e)}), 500
 
 @app.route('/api/force-transactions', methods=['POST'])
@@ -631,7 +677,7 @@ def classify_stream():
             stats['categories_used'] = [str(c) for c in cats_used]
             safe = sanitize_records(results.where(pd.notnull(results), None).to_dict('records'))
             if fhash: _persist_results(user_id, fhash, fname, safe, stats, out)
-            q.put({'type': 'done', 'results': safe, 'stats': stats, 'output_file': str(out)})
+            q.put({'type': 'done', 'results': safe, 'stats': stats, 'output_file': str(out), 'file_hash': fhash or ''})
         except Exception as e:
             import traceback; traceback.print_exc()
             q.put({'type': 'error', 'error': str(e)})
@@ -677,12 +723,89 @@ def classify_transactions_route():
 @app.route('/api/update-classification', methods=['POST'])
 @login_required
 def update_classification():
+    """
+    Save a per-transaction cell edit.
+    Payload:
+      description  – original transaction description (for vendor learning)
+      category     – new category value (shorthand for field_name=Category)
+      field_name   – which column was edited (default: 'Category')
+      new_value    – the new cell value
+      old_value    – the previous cell value (for audit)
+      row_index    – 0-based row number in the current results array
+      file_hash    – hash of the file being edited
+    """
     try:
-        d = request.get_json()
-        if not d.get('description') or not d.get('category'):
-            return jsonify({'error': 'Missing description or category'}), 400
-        classifier.learn_mapping(d['description'], d['category'])
+        d = request.get_json() or {}
+        field_name  = d.get('field_name', 'Category')
+        new_value   = d.get('new_value') or d.get('category') or ''
+        old_value   = d.get('old_value', '')
+        row_index   = d.get('row_index')
+        file_hash   = d.get('file_hash', '')
+        description = d.get('description', '')
+
+        if not new_value:
+            return jsonify({'error': 'new_value is required'}), 400
+
+        user_id = session['user_id']
+
+        # 1. Vendor memory (for Category edits)
+        if field_name == 'Category' and description:
+            classifier.learn_mapping(description, new_value)
+            try:
+                vendor = classifier.extract_vendor(description)
+                if vendor:
+                    conn = get_db(); cur = conn.cursor()
+                    cur.execute("""
+                        INSERT INTO vendor_memory (user_id, vendor_key, category)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (user_id, vendor_key)
+                        DO UPDATE SET category=EXCLUDED.category, updated_at=NOW()
+                    """, (user_id, vendor, new_value))
+                    conn.commit(); cur.close(); conn.close()
+            except Exception as ve:
+                print(f"\u26a0\ufe0f  vendor_memory DB write failed: {ve}")
+
+        # 2. Per-transaction override
+        if row_index is not None and file_hash:
+            try:
+                conn = get_db(); cur = conn.cursor()
+                cur.execute("""
+                    INSERT INTO transaction_overrides
+                        (user_id, file_hash, row_index, description, field_name, old_value, new_value)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (user_id, file_hash, row_index, field_name)
+                    DO UPDATE SET new_value=EXCLUDED.new_value, old_value=EXCLUDED.old_value,
+                                  description=EXCLUDED.description, updated_at=NOW()
+                """, (user_id, file_hash, int(row_index), description, field_name, old_value, new_value))
+                conn.commit(); cur.close(); conn.close()
+            except Exception as oe:
+                print(f"\u26a0\ufe0f  transaction_overrides DB write failed: {oe}")
+
         return jsonify({'success': True})
+    except Exception as e: return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/overrides', methods=['GET'])
+@login_required
+def get_overrides():
+    """Return saved overrides for a file so the UI can re-apply them after reload."""
+    try:
+        file_hash = request.args.get('file_hash', '')
+        if not file_hash:
+            return jsonify({'overrides': []})
+        conn = get_db(); cur = conn.cursor()
+        cur.execute("""
+            SELECT row_index, field_name, new_value, description, updated_at
+            FROM transaction_overrides
+            WHERE user_id=%s AND file_hash=%s
+            ORDER BY row_index, field_name
+        """, (session['user_id'], file_hash))
+        rows = [dict(r) for r in cur.fetchall()]
+        cur.close(); conn.close()
+        for r in rows:
+            if r.get('updated_at'):
+                r['updated_at'] = str(r['updated_at'])
+        return jsonify({'overrides': rows})
     except Exception as e: return jsonify({'error': str(e)}), 500
 
 @app.route('/api/download-results', methods=['GET'])
