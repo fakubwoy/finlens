@@ -393,6 +393,14 @@ class ExpenseClassifier:
             response_text = chat.choices[0].message.content.strip()
             response_text = re.sub(r'^```json\s*|\s*```$', '', response_text).strip()
             response_text = re.sub(r'^```\s*|\s*```$', '', response_text).strip()
+            # Strip any plain-text preamble before the JSON object (e.g. "Sure! {...")
+            brace = response_text.find('{')
+            if brace > 0:
+                response_text = response_text[brace:]
+            # Strip anything after the closing brace
+            rbrace = response_text.rfind('}')
+            if rbrace >= 0:
+                response_text = response_text[:rbrace + 1]
 
             result     = json.loads(response_text)
             category   = result.get('category', 'Other')

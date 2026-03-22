@@ -48,48 +48,49 @@ def get_db():
 
 
 def init_db():
-    conn = get_db(); cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
+    """
+    Create all tables idempotently.
+    Each statement runs in its own try/except so a pre-existing sequence
+    (from a previous SERIAL column) never aborts the whole block.
+    """
+    ddl_statements = [
+        """CREATE TABLE IF NOT EXISTS users (
             id         SERIAL PRIMARY KEY,
             email      TEXT UNIQUE NOT NULL,
             password   TEXT NOT NULL,
             name       TEXT NOT NULL,
             created_at TIMESTAMPTZ DEFAULT NOW()
-        );""")
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS category_master (
-            id                       SERIAL PRIMARY KEY,
-            user_id                  INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            highlevel_classification TEXT,
-            code                     TEXT,
-            account_name             TEXT NOT NULL,
-            type                     TEXT,
-            sub_group                TEXT,
-            sch_iii_map              TEXT,
-            gst_flag                 TEXT,
-            tds_section              TEXT,
-            boe_flag                 TEXT,
-            llm_keywords             TEXT,
-            is_active                TEXT DEFAULT 'TRUE',
-            repeating_keywords       TEXT,
-            if_narration_keyword     TEXT,
+        )""",
+        """CREATE TABLE IF NOT EXISTS category_master (
+            id                        SERIAL PRIMARY KEY,
+            user_id                   INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            highlevel_classification  TEXT,
+            code                      TEXT,
+            account_name              TEXT NOT NULL,
+            type                      TEXT,
+            sub_group                 TEXT,
+            sch_iii_map               TEXT,
+            gst_flag                  TEXT,
+            tds_section               TEXT,
+            boe_flag                  TEXT,
+            llm_keywords              TEXT,
+            is_active                 TEXT DEFAULT 'TRUE',
+            repeating_keywords        TEXT,
+            if_narration_keyword      TEXT,
             if_not_party_name_keyword TEXT,
-            classification           TEXT,
-            sort_order               INTEGER DEFAULT 0,
-            updated_at               TIMESTAMPTZ DEFAULT NOW()
-        );""")
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS file_cache (
+            classification            TEXT,
+            sort_order                INTEGER DEFAULT 0,
+            updated_at                TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS file_cache (
             file_hash     TEXT PRIMARY KEY,
             filename      TEXT NOT NULL,
             user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
             results_json  TEXT NOT NULL,
             stats_json    TEXT NOT NULL,
             classified_at TIMESTAMPTZ DEFAULT NOW()
-        );""")
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS classification_history (
+        )""",
+        """CREATE TABLE IF NOT EXISTS classification_history (
             id         SERIAL PRIMARY KEY,
             user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
             filename   TEXT NOT NULL,
@@ -98,54 +99,43 @@ def init_db():
             stats_json TEXT,
             output_csv TEXT,
             created_at TIMESTAMPTZ DEFAULT NOW()
-        );""")
-    # Per-transaction overrides — stores any cell edit a user makes
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS transaction_overrides (
-            id            SERIAL PRIMARY KEY,
-            user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            file_hash     TEXT NOT NULL,
-            row_index     INTEGER NOT NULL,
-            description   TEXT,
-            field_name    TEXT NOT NULL,
-            old_value     TEXT,
-            new_value     TEXT NOT NULL,
-            updated_at    TIMESTAMPTZ DEFAULT NOW(),
-            UNIQUE (user_id, file_hash, row_index, field_name)
-        );""")
-    # Vendor memory in DB (per-user) — mirrors vendor_memory.json but persisted
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS vendor_memory (
+        )""",
+        """CREATE TABLE IF NOT EXISTS transaction_overrides (
             id          SERIAL PRIMARY KEY,
             user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            vendor_key  TEXT NOT NULL,
-            category    TEXT NOT NULL,
+            file_hash   TEXT NOT NULL,
+            row_index   INTEGER NOT NULL,
+            description TEXT,
+            field_name  TEXT NOT NULL,
+            old_value   TEXT,
+            new_value   TEXT NOT NULL,
             updated_at  TIMESTAMPTZ DEFAULT NOW(),
-            UNIQUE (user_id, vendor_key)
-        );""")
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS transaction_overrides (
-            id            SERIAL PRIMARY KEY,
-            user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            file_hash     TEXT NOT NULL,
-            row_index     INTEGER NOT NULL,
-            description   TEXT,
-            field_name    TEXT NOT NULL,
-            old_value     TEXT,
-            new_value     TEXT NOT NULL,
-            updated_at    TIMESTAMPTZ DEFAULT NOW(),
             UNIQUE (user_id, file_hash, row_index, field_name)
-        );""")
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS vendor_memory (
-            id          SERIAL PRIMARY KEY,
-            user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            vendor_key  TEXT NOT NULL,
-            category    TEXT NOT NULL,
-            updated_at  TIMESTAMPTZ DEFAULT NOW(),
+        )""",
+        """CREATE TABLE IF NOT EXISTS vendor_memory (
+            id         SERIAL PRIMARY KEY,
+            user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            vendor_key TEXT NOT NULL,
+            category   TEXT NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
             UNIQUE (user_id, vendor_key)
-        );""")
-    conn.commit(); cur.close(); conn.close()
+        )""",
+    ]
+
+    conn = get_db()
+    for ddl in ddl_statements:
+        # Each statement in its own savepoint so one failure doesn't kill the rest
+        try:
+            cur = conn.cursor()
+            cur.execute(ddl)
+            conn.commit()
+            cur.close()
+        except Exception as e:
+            conn.rollback()
+            # IF NOT EXISTS should prevent most errors; log anything unexpected
+            if 'already exists' not in str(e).lower():
+                print(f"⚠️  DDL warning: {e}")
+    conn.close()
     print("✅ DB tables ready")
     _load_master_into_classifier()
 
@@ -178,7 +168,7 @@ def _load_master_into_classifier(user_id=None):
 try:
     init_db()
 except Exception as e:
-    print(f"⚠️  DB init skipped: {e}")
+    print(f"⚠️  DB init failed (check DATABASE_URL): {e}")
 
 # ─────────────────────────────────────────────────────────────
 #  Auth decorator
