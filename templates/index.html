@@ -3432,7 +3432,7 @@ async function xgAutoSaveCell(origIdx, ri, col, oldVal, newVal) {
     const fh = XG.currentFileHash;
 
     try {
-        await fetch(`${API}/update-classification`, {
+        const res = await fetch(`${API}/update-classification`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -3446,12 +3446,44 @@ async function xgAutoSaveCell(origIdx, ri, col, oldVal, newVal) {
                 category:    col.key === 'Category' ? newVal : row.Category,
             })
         });
-        // For category changes, update also in state.allResults
+        const data = await res.json();
+
+        // Apply change to the edited row
         if (state.allResults && state.allResults[origIdx]) {
             state.allResults[origIdx][col.key] = newVal;
             if (col.key === 'Category') {
                 state.allResults[origIdx].Status = 'Approved';
                 state.allResults[origIdx].Method = 'corrected';
+            }
+        }
+        XG.results[origIdx][col.key] = newVal;
+        if (col.key === 'Category') {
+            XG.results[origIdx].Status = 'Approved';
+            XG.results[origIdx].Method = 'corrected';
+        }
+
+        // ── Bulk-update all rows with the same description ──
+        if (col.key === 'Category' && data.affected_rows && data.affected_rows.length > 1) {
+            let bulkCount = 0;
+            data.affected_rows.forEach(affIdx => {
+                if (affIdx === origIdx) return; // already done
+                if (state.allResults && state.allResults[affIdx]) {
+                    state.allResults[affIdx][col.key] = newVal;
+                    state.allResults[affIdx].Status = 'Approved';
+                    state.allResults[affIdx].Method = 'corrected';
+                }
+                if (XG.results[affIdx]) {
+                    XG.results[affIdx][col.key] = newVal;
+                    XG.results[affIdx].Status = 'Approved';
+                    XG.results[affIdx].Method = 'corrected';
+                }
+                bulkCount++;
+            });
+            if (bulkCount > 0) {
+                // Re-render grid to reflect all changes
+                xgApplyFilter();
+                toast(`✓ Updated ${bulkCount + 1} matching transactions → "${newVal}"`, 'success');
+                return; // skip the default single-row toast below
             }
         }
     } catch (err) {

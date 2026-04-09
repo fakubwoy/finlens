@@ -120,6 +120,14 @@ def init_db():
             updated_at TIMESTAMPTZ DEFAULT NOW(),
             UNIQUE (user_id, vendor_key)
         )""",
+        """CREATE TABLE IF NOT EXISTS description_memory (
+            id             SERIAL PRIMARY KEY,
+            user_id        INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            description_key TEXT NOT NULL,
+            category        TEXT NOT NULL,
+            updated_at      TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE (user_id, description_key)
+        )""",
     ]
 
     conn = get_db()
@@ -147,7 +155,6 @@ def _load_master_into_classifier(user_id=None):
         if user_id:
             cur.execute("SELECT * FROM category_master WHERE user_id=%s ORDER BY sort_order, id", (user_id,))
         else:
-            # Load global master (user_id IS NULL) or the most recently updated user's master
             cur.execute("""
                 SELECT * FROM category_master
                 WHERE user_id = (
@@ -163,6 +170,20 @@ def _load_master_into_classifier(user_id=None):
             print(f"✅ Loaded {len(rows)} master rows into classifier")
     except Exception as e:
         print(f"⚠️  Could not load master from DB: {e}")
+
+
+def _load_description_memory_into_classifier(user_id):
+    """Load per-user description memory from DB into the in-memory classifier."""
+    try:
+        conn = get_db(); cur = conn.cursor()
+        cur.execute("SELECT description_key, category FROM description_memory WHERE user_id=%s", (user_id,))
+        rows = cur.fetchall(); cur.close(); conn.close()
+        for r in rows:
+            classifier.description_memory[r['description_key']] = r['category']
+        if rows:
+            print(f"✅ Loaded {len(rows)} description memory entries for user {user_id}")
+    except Exception as e:
+        print(f"⚠️  Could not load description_memory from DB: {e}")
 
 
 try:
@@ -320,8 +341,9 @@ def login():
             return jsonify({'error': 'Invalid email or password'}), 401
         session.permanent = True
         session.update({'user_id': user['id'], 'user_name': user['name'], 'user_email': user['email']})
-        # Load this user's master into the classifier
+        # Load this user's master and description memory into the classifier
         _load_master_into_classifier(user['id'])
+        _load_description_memory_into_classifier(user['id'])
         return jsonify({'success': True, 'user': {'id': user['id'], 'name': user['name'], 'email': user['email']}})
     except Exception as e: return jsonify({'error': str(e)}), 500
 
@@ -333,6 +355,7 @@ def logout():
 def me():
     if 'user_id' not in session: return jsonify({'authenticated': False})
     _load_master_into_classifier(session['user_id'])
+    _load_description_memory_into_classifier(session['user_id'])
     return jsonify({'authenticated': True,
                     'user': {'id': session['user_id'], 'name': session['user_name'], 'email': session['user_email']}})
 
@@ -723,6 +746,10 @@ def update_classification():
       old_value    – the previous cell value (for audit)
       row_index    – 0-based row number in the current results array
       file_hash    – hash of the file being edited
+
+    Returns:
+      affected_rows  – list of all row indexes that share the same description
+                       (so the frontend can bulk-update them instantly)
     """
     try:
         d = request.get_json() or {}
@@ -738,9 +765,11 @@ def update_classification():
 
         user_id = session['user_id']
 
-        # 1. Vendor memory (for Category edits)
+        # ── 1. Vendor + description memory (for Category edits) ──
         if field_name == 'Category' and description:
             classifier.learn_mapping(description, new_value)
+
+            # Persist vendor memory to DB
             try:
                 vendor = classifier.extract_vendor(description)
                 if vendor:
@@ -753,9 +782,24 @@ def update_classification():
                     """, (user_id, vendor, new_value))
                     conn.commit(); cur.close(); conn.close()
             except Exception as ve:
-                print(f"\u26a0\ufe0f  vendor_memory DB write failed: {ve}")
+                print(f"⚠️  vendor_memory DB write failed: {ve}")
 
-        # 2. Per-transaction override
+            # Persist description memory to DB
+            try:
+                desc_key = classifier.normalize_description(description)
+                if desc_key:
+                    conn = get_db(); cur = conn.cursor()
+                    cur.execute("""
+                        INSERT INTO description_memory (user_id, description_key, category)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (user_id, description_key)
+                        DO UPDATE SET category=EXCLUDED.category, updated_at=NOW()
+                    """, (user_id, desc_key, new_value))
+                    conn.commit(); cur.close(); conn.close()
+            except Exception as de:
+                print(f"⚠️  description_memory DB write failed: {de}")
+
+        # ── 2. Per-transaction override (for this specific row) ──
         if row_index is not None and file_hash:
             try:
                 conn = get_db(); cur = conn.cursor()
@@ -769,9 +813,57 @@ def update_classification():
                 """, (user_id, file_hash, int(row_index), description, field_name, old_value, new_value))
                 conn.commit(); cur.close(); conn.close()
             except Exception as oe:
-                print(f"\u26a0\ufe0f  transaction_overrides DB write failed: {oe}")
+                print(f"⚠️  transaction_overrides DB write failed: {oe}")
 
-        return jsonify({'success': True})
+        # ── 3. Find all other rows in the cached results that share the same description ──
+        affected_rows = []
+        if field_name == 'Category' and description and file_hash:
+            try:
+                conn = get_db(); cur = conn.cursor()
+                cur.execute(
+                    "SELECT results_json FROM file_cache WHERE file_hash=%s AND user_id=%s",
+                    (file_hash, user_id)
+                )
+                cached = cur.fetchone(); cur.close(); conn.close()
+                if cached:
+                    results = json.loads(cached['results_json'])
+                    desc_norm = classifier.normalize_description(description)
+
+                    # Find description column (same priority order as the frontend)
+                    DESC_COLS = {'description','narration','desc','particulars',
+                                 'details','merchant','remarks','transaction details','narrations'}
+                    desc_col = None
+                    if results:
+                        for k in results[0].keys():
+                            if k.lower().strip() in DESC_COLS:
+                                desc_col = k
+                                break
+                        if desc_col is None:
+                            desc_col = next(iter(results[0].keys()), None)
+
+                    for i, row in enumerate(results):
+                        row_desc = str(row.get(desc_col, '') or '') if desc_col else ''
+                        if classifier.normalize_description(row_desc) == desc_norm:
+                            affected_rows.append(i)
+                            # Bulk-save overrides for sibling rows
+                            if i != row_index:
+                                try:
+                                    conn2 = get_db(); cur2 = conn2.cursor()
+                                    cur2.execute("""
+                                        INSERT INTO transaction_overrides
+                                            (user_id, file_hash, row_index, description, field_name, old_value, new_value)
+                                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                        ON CONFLICT (user_id, file_hash, row_index, field_name)
+                                        DO UPDATE SET new_value=EXCLUDED.new_value, updated_at=NOW()
+                                    """, (user_id, file_hash, i, row_desc, field_name,
+                                          str(row.get('Category', '')), new_value))
+                                    conn2.commit(); cur2.close(); conn2.close()
+                                except Exception:
+                                    pass
+            except Exception as fe:
+                print(f"⚠️  affected_rows lookup failed: {fe}")
+
+        return jsonify({'success': True, 'affected_rows': affected_rows})
     except Exception as e: return jsonify({'error': str(e)}), 500
 
 

@@ -14,12 +14,15 @@ class ExpenseClassifier:
         self.category_meta = {}        # account_name -> {code, gst_flag, tds_section, boe_flag, ...}
         self.conditional_rules = []    # [{account_name, if_narration, if_not_party}]
         self.vendor_memory = {}
+        self.description_memory = {}   # normalized description -> category (user overrides)
         self.categories_loaded = False
         self.memory_file = 'data/vendor_memory.json'
+        self.description_memory_file = 'data/description_memory.json'
         self.client = None
         self.ai_provider = None
 
         self.load_vendor_memory()
+        self.load_description_memory()
         self._init_ai()
 
     def _init_ai(self):
@@ -59,6 +62,47 @@ class ExpenseClassifier:
         os.makedirs(os.path.dirname(self.memory_file), exist_ok=True)
         with open(self.memory_file, 'w') as f:
             json.dump(self.vendor_memory, f, indent=2)
+
+    def load_description_memory(self):
+        if os.path.exists(self.description_memory_file):
+            try:
+                with open(self.description_memory_file, 'r') as f:
+                    self.description_memory = json.load(f)
+            except Exception:
+                self.description_memory = {}
+
+    def save_description_memory(self):
+        os.makedirs(os.path.dirname(self.description_memory_file), exist_ok=True)
+        with open(self.description_memory_file, 'w') as f:
+            json.dump(self.description_memory, f, indent=2)
+
+    def normalize_description(self, description: str) -> str:
+        """
+        Produce a stable key from a raw transaction description.
+        Strips trailing reference numbers / UPI trace IDs / dates so that
+        two narrations for the same vendor/payee collapse to the same key.
+        Example:
+          "UPI-AMAZON INDIA-AMAZONUPI@APL-UTIB0000100-512366274028-YOU ARE PAYING FOR"
+          → "upi amazon india amazonupi apl"
+        """
+        s = str(description).lower()
+        # Remove long numeric sequences (trace IDs, amounts, dates)
+        s = re.sub(r'\b\d{5,}\b', '', s)
+        # Remove common suffix phrases
+        s = re.sub(r'you are paying for.*$', '', s)
+        s = re.sub(r'payment.*$', '', s)
+        # Keep only alphanumeric + space
+        s = re.sub(r'[^a-z0-9\s]', ' ', s)
+        # Collapse whitespace and take first ~8 meaningful tokens
+        tokens = s.split()
+        return ' '.join(tokens[:8]).strip()
+
+    def learn_description_mapping(self, description: str, category: str):
+        """Store a user-confirmed category keyed on the normalized description."""
+        key = self.normalize_description(description)
+        if key:
+            self.description_memory[key] = category
+            self.save_description_memory()
 
     # ─────────────────────────────────────────────────────────
     #  Load from master (DB rows or DataFrame)
@@ -247,6 +291,14 @@ class ExpenseClassifier:
         clean_desc = self.preprocess_description(description)
         raw_lower  = description.lower()
 
+        # ── 0a. User description-pattern memory (highest priority) ──
+        desc_key = self.normalize_description(description)
+        if desc_key and desc_key in self.description_memory:
+            mem_cat = self.description_memory[desc_key]
+            if mem_cat in categories:
+                return mem_cat, 0.99
+
+        # ── 0b. Vendor memory ──
         vendor = self.extract_vendor(description)
         if vendor and vendor in self.vendor_memory:
             mem_cat = self.vendor_memory[vendor]
@@ -555,3 +607,5 @@ class ExpenseClassifier:
         if vendor:
             self.vendor_memory[vendor] = category
             self.save_vendor_memory()
+        # Always store the full description pattern
+        self.learn_description_mapping(description, category)
