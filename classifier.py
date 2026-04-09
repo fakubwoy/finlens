@@ -78,24 +78,38 @@ class ExpenseClassifier:
 
     def normalize_description(self, description: str) -> str:
         """
-        Produce a stable key from a raw transaction description.
-        Strips trailing reference numbers / UPI trace IDs / dates so that
-        two narrations for the same vendor/payee collapse to the same key.
-        Example:
+        Produce a stable vendor-identity key from a raw transaction description.
+        Strips UPI trace IDs, IFSC bank routing codes, reference numbers and
+        suffix noise so that all transactions for the same payee collapse to
+        the same key regardless of which branch / payment reference was used.
+
+        Examples:
           "UPI-AMAZON INDIA-AMAZONUPI@APL-UTIB0000100-512366274028-YOU ARE PAYING FOR"
-          → "upi amazon india amazonupi apl"
+          "UPI-AMAZON INDIA-AMAZONUPI@APL-HDFC0000001-999888777666-YOU ARE PAYING FOR"
+          → both → "upi amazon india amazonupi apl"
+
+          "UPI-INDIAN RAILWAYS CATE-IRCTC.RAZORPAY@ICICI-ICIC0000001-..."
+          → "upi indian railways cate irctc"
         """
         s = str(description).lower()
-        # Remove long numeric sequences (trace IDs, amounts, dates)
+        # Remove pure numeric sequences 5+ digits (trace IDs, amounts, dates)
         s = re.sub(r'\b\d{5,}\b', '', s)
-        # Remove common suffix phrases
+        # Remove common suffix noise phrases
         s = re.sub(r'you are paying for.*$', '', s)
-        s = re.sub(r'payment.*$', '', s)
+        s = re.sub(r'payment to.*$', '', s)
         # Keep only alphanumeric + space
         s = re.sub(r'[^a-z0-9\s]', ' ', s)
-        # Collapse whitespace and take first ~8 meaningful tokens
+        # Drop tokens that are IFSC-style bank routing codes:
+        # alphanumeric 6+ chars containing BOTH letters and digits
+        # e.g. UTIB0000100, HDFC0000001, K4RH44MPAN525PGWCQ
         tokens = s.split()
-        return ' '.join(tokens[:8]).strip()
+        clean = [t for t in tokens
+                 if not (len(t) >= 6
+                         and re.search(r'[0-9]', t)
+                         and re.search(r'[a-z]', t))]
+        # Take only the first 5 tokens — enough for vendor identity,
+        # short enough to avoid per-transaction noise bleeding in
+        return ' '.join(clean[:5]).strip()
 
     def learn_description_mapping(self, description: str, category: str):
         """Store a user-confirmed category keyed on the normalized description."""
