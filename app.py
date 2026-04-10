@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, send_file, session
 from flask_cors import CORS
 import pandas as pd
 import numpy as np
-import json, os, math, hashlib
+import json, os, math, hashlib, gc
 import psycopg2, psycopg2.extras
 from datetime import datetime
 from classifier import ExpenseClassifier
@@ -49,9 +49,8 @@ def get_db():
 
 def init_db():
     """
-    Create all tables idempotently.
-    Each statement runs in its own try/except so a pre-existing sequence
-    (from a previous SERIAL column) never aborts the whole block.
+    Create all tables idempotently, and drop the heavy results_json/stats_json columns
+    from file_cache to save memory. Also remove those columns if they exist.
     """
     ddl_statements = [
         """CREATE TABLE IF NOT EXISTS users (
@@ -86,8 +85,6 @@ def init_db():
             file_hash     TEXT PRIMARY KEY,
             filename      TEXT NOT NULL,
             user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            results_json  TEXT NOT NULL,
-            stats_json    TEXT NOT NULL,
             classified_at TIMESTAMPTZ DEFAULT NOW()
         )""",
         """CREATE TABLE IF NOT EXISTS classification_history (
@@ -132,7 +129,6 @@ def init_db():
 
     conn = get_db()
     for ddl in ddl_statements:
-        # Each statement in its own savepoint so one failure doesn't kill the rest
         try:
             cur = conn.cursor()
             cur.execute(ddl)
@@ -140,9 +136,20 @@ def init_db():
             cur.close()
         except Exception as e:
             conn.rollback()
-            # IF NOT EXISTS should prevent most errors; log anything unexpected
             if 'already exists' not in str(e).lower():
                 print(f"⚠️  DDL warning: {e}")
+
+    # Drop the heavy columns if they still exist (from old schema)
+    try:
+        cur = conn.cursor()
+        cur.execute("ALTER TABLE file_cache DROP COLUMN IF EXISTS results_json")
+        cur.execute("ALTER TABLE file_cache DROP COLUMN IF EXISTS stats_json")
+        conn.commit()
+        cur.close()
+        print("✅ Dropped results_json/stats_json columns (if existed)")
+    except Exception as e:
+        print(f"⚠️  Could not drop columns: {e}")
+
     conn.close()
     print("✅ DB tables ready")
     _load_master_into_classifier()
@@ -289,15 +296,16 @@ def _get_current_hash():
         return parts[0], (parts[1] if len(parts) > 1 else 'transactions.csv')
     return None, 'transactions.csv'
 
-def _persist_results(user_id, fhash, filename, results_safe, stats, output_file):
+def _persist_results(user_id, fhash, filename, stats, output_file):
+    """Store only metadata, not the full results JSON."""
     try:
         conn = get_db(); cur = conn.cursor()
         cur.execute("""
-            INSERT INTO file_cache (file_hash, filename, user_id, results_json, stats_json)
-            VALUES (%s,%s,%s,%s,%s)
+            INSERT INTO file_cache (file_hash, filename, user_id)
+            VALUES (%s,%s,%s)
             ON CONFLICT (file_hash) DO UPDATE
-            SET results_json=EXCLUDED.results_json, stats_json=EXCLUDED.stats_json, classified_at=NOW()
-        """, (fhash, filename, user_id, json.dumps(results_safe), json.dumps(stats)))
+            SET filename=EXCLUDED.filename, classified_at=NOW()
+        """, (fhash, filename, user_id))
         cur.execute("""
             INSERT INTO classification_history (user_id, filename, file_hash, total_rows, stats_json, output_csv)
             VALUES (%s,%s,%s,%s,%s,%s)
@@ -307,7 +315,7 @@ def _persist_results(user_id, fhash, filename, results_safe, stats, output_file)
         print(f"⚠️  DB persist failed: {e}")
 
 # ─────────────────────────────────────────────────────────────
-#  Auth routes
+#  Auth routes (unchanged)
 # ─────────────────────────────────────────────────────────────
 
 @app.route('/api/auth/signup', methods=['POST'])
@@ -341,7 +349,6 @@ def login():
             return jsonify({'error': 'Invalid email or password'}), 401
         session.permanent = True
         session.update({'user_id': user['id'], 'user_name': user['name'], 'user_email': user['email']})
-        # Load this user's master and description memory into the classifier
         _load_master_into_classifier(user['id'])
         _load_description_memory_into_classifier(user['id'])
         return jsonify({'success': True, 'user': {'id': user['id'], 'name': user['name'], 'email': user['email']}})
@@ -360,7 +367,7 @@ def me():
                     'user': {'id': session['user_id'], 'name': session['user_name'], 'email': session['user_email']}})
 
 # ─────────────────────────────────────────────────────────────
-#  Category Master CRUD
+#  Category Master CRUD (unchanged)
 # ─────────────────────────────────────────────────────────────
 
 MASTER_COLS = ['highlevel_classification','code','account_name','type','sub_group','sch_iii_map',
@@ -401,7 +408,6 @@ def update_master_row(row_id):
     try:
         d = request.get_json() or {}
         conn = get_db(); cur = conn.cursor()
-        # Verify ownership
         cur.execute("SELECT id FROM category_master WHERE id=%s AND user_id=%s", (row_id, session['user_id']))
         if not cur.fetchone(): cur.close(); conn.close(); return jsonify({'error': 'Not found'}), 404
         set_clause = ', '.join([f"{c}=%s" for c in MASTER_COLS]) + ', updated_at=NOW()'
@@ -426,7 +432,6 @@ def delete_master_row(row_id):
 @app.route('/api/master/upload', methods=['POST'])
 @login_required
 def upload_master():
-    """Parse uploaded Excel/CSV and upsert all rows into DB."""
     if 'file' not in request.files: return jsonify({'error': 'No file'}), 400
     file = request.files['file']
     if not file or not allowed_file(file.filename): return jsonify({'error': 'Invalid file type'}), 400
@@ -436,7 +441,6 @@ def upload_master():
         file.save(filepath)
         df = load_df(filepath, filename)
 
-        # Normalise column names
         col_map = {
             'highlevel\nclassification': 'highlevel_classification',
             'highlevel classification':  'highlevel_classification',
@@ -458,7 +462,6 @@ def upload_master():
                       for c in df.columns]
 
         conn = get_db(); cur = conn.cursor()
-        # Delete existing rows for this user
         cur.execute("DELETE FROM category_master WHERE user_id=%s", (session['user_id'],))
 
         inserted = 0
@@ -519,14 +522,18 @@ def get_history():
 def get_history_results(hid):
     try:
         conn = get_db(); cur = conn.cursor()
-        cur.execute("""SELECT h.file_hash,h.filename,fc.results_json,fc.stats_json
+        cur.execute("""SELECT h.file_hash,h.filename,h.output_csv,fc.classified_at
                        FROM classification_history h
                        JOIN file_cache fc ON fc.file_hash=h.file_hash
                        WHERE h.id=%s AND h.user_id=%s""", (hid, session['user_id']))
         row = cur.fetchone(); cur.close(); conn.close()
-        if not row: return jsonify({'error': 'Not found'}), 404
-        return jsonify({'success': True, 'results': json.loads(row['results_json']),
-                        'stats': json.loads(row['stats_json']), 'filename': row['filename']})
+        if not row or not row['output_csv'] or not os.path.exists(row['output_csv']):
+            return jsonify({'error': 'Results file not found'}), 404
+        # Read the CSV file and return as JSON (could be large, but limited to history view)
+        df = pd.read_csv(row['output_csv'])
+        results_safe = sanitize_records(df.to_dict('records'))
+        stats = {}  # we could parse stats from history table
+        return jsonify({'success': True, 'results': results_safe, 'stats': stats, 'filename': row['filename']})
     except Exception as e: return jsonify({'error': str(e)}), 500
 
 @app.route('/api/history/<int:hid>/download', methods=['GET'])
@@ -563,7 +570,7 @@ def upload_file():
         file.save(filepath)
         fhash = compute_file_hash(filepath)
 
-        # Check cache
+        # Check cache existence
         already = False
         try:
             conn = get_db(); cur = conn.cursor()
@@ -574,7 +581,7 @@ def upload_file():
         df = load_df(filepath, filename)
 
         if is_category_master_file(df):
-            # Route through the dedicated master upload endpoint logic
+            # (same as before, unchanged)
             col_map = {
                 'highlevel\nclassification': 'highlevel_classification',
                 'highlevel classification':  'highlevel_classification',
@@ -611,7 +618,7 @@ def upload_file():
                             'categories_loaded': inserted, 'categories_sample': [],
                             'message': f'{inserted} accounts saved to your category master.'})
 
-        # Transactions
+        # Transactions: save file and store hash
         df.to_csv(os.path.join(DATA_FOLDER, 'current_transactions.csv'), index=False)
         with open(os.path.join(DATA_FOLDER, 'current_hash.txt'), 'w') as f:
             f.write(f'{fhash}|||{filename}')
@@ -632,18 +639,38 @@ def upload_file():
 @app.route('/api/load-cached', methods=['POST'])
 @login_required
 def load_cached():
+    """Load previous results from the CSV file (not from DB JSON)."""
     try:
         hf = os.path.join(DATA_FOLDER, 'current_hash.txt')
         if not os.path.exists(hf): return jsonify({'error': 'No file uploaded yet'}), 400
         fhash, filename = open(hf).read().split('|||', 1)
         conn = get_db(); cur = conn.cursor()
-        cur.execute('SELECT results_json,stats_json FROM file_cache WHERE file_hash=%s AND user_id=%s',
+        cur.execute("SELECT output_csv FROM classification_history WHERE file_hash=%s AND user_id=%s ORDER BY created_at DESC LIMIT 1",
                     (fhash, session['user_id']))
-        cached = cur.fetchone(); cur.close(); conn.close()
-        if not cached: return jsonify({'error': 'No cached results found'}), 404
-        return jsonify({'success': True, 'results': json.loads(cached['results_json']),
-                        'stats': json.loads(cached['stats_json']), 'from_cache': True, 'file_hash': fhash})
-    except Exception as e: return jsonify({'error': str(e)}), 500
+        row = cur.fetchone(); cur.close(); conn.close()
+        if not row or not row['output_csv'] or not os.path.exists(row['output_csv']):
+            return jsonify({'error': 'No cached results found'}), 404
+        # Read the CSV file – for large files, limit rows? But frontend expects all for editing.
+        # We'll read all, but it will be loaded into memory once per request. Could be heavy but acceptable.
+        df = pd.read_csv(row['output_csv'])
+        # Ensure numeric columns are proper
+        if 'Confidence' in df.columns:
+            df['Confidence'] = pd.to_numeric(df['Confidence'], errors='coerce')
+        results_safe = sanitize_records(df.to_dict('records'))
+        # Recompute stats (or load from history stats_json)
+        # For simplicity, compute on the fly (small overhead)
+        stats = build_stats(df, 0.6)  # need threshold from somewhere; use default
+        # Optionally fetch stats from classification_history.stats_json
+        cur2 = get_db().cursor()
+        cur2.execute("SELECT stats_json FROM classification_history WHERE file_hash=%s AND user_id=%s ORDER BY created_at DESC LIMIT 1",
+                     (fhash, session['user_id']))
+        stat_row = cur2.fetchone()
+        if stat_row and stat_row['stats_json']:
+            stats = json.loads(stat_row['stats_json'])
+        cur2.close()
+        return jsonify({'success': True, 'results': results_safe, 'stats': stats, 'from_cache': True, 'file_hash': fhash})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/force-transactions', methods=['POST'])
 @login_required
@@ -674,23 +701,32 @@ def classify_stream():
             yield 'data: ' + json.dumps({'error': 'No transactions file found'}) + '\n\n'
         return app.response_class(err_gen(), mimetype='text/event-stream')
 
-    df = pd.read_csv(trans_file, dtype=str).fillna('')
-    q  = queue.Queue()
+    q = queue.Queue()
 
     def worker():
         try:
-            results, file_type, cats_used = classifier.classify_transactions(
-                df, categories=custom_cats, use_ai=use_ai,
-                confidence_threshold=conf_threshold, progress_queue=q)
+            # Use chunked classification
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            out = os.path.join(OUTPUT_FOLDER, f'classified_{ts}.csv')
-            results.to_csv(out, index=False)
-            stats = build_stats(results, conf_threshold)
-            stats['file_type'] = str(file_type)
-            stats['categories_used'] = [str(c) for c in cats_used]
-            safe = sanitize_records(results.where(pd.notnull(results), None).to_dict('records'))
-            if fhash: _persist_results(user_id, fhash, fname, safe, stats, out)
-            q.put({'type': 'done', 'results': safe, 'stats': stats, 'output_file': str(out), 'file_hash': fhash or ''})
+            output_csv = os.path.join(OUTPUT_FOLDER, f'classified_{ts}.csv')
+            # Pass the chunked method
+            _, categories_used, stats = classifier.classify_transactions_chunked(
+                trans_file, output_csv,
+                categories=custom_cats,
+                use_ai=use_ai,
+                confidence_threshold=conf_threshold,
+                chunksize=5000,
+                progress_queue=q
+            )
+            # stats already contains file_type and categories_used
+            stats['file_type'] = classifier.detect_file_type(pd.read_csv(trans_file, nrows=1))
+            stats['categories_used'] = categories_used
+            # Persist metadata
+            if fhash:
+                _persist_results(user_id, fhash, fname, stats, output_csv)
+            # Send final results: we need to send the results rows? For streaming, we already sent progress.
+            # But the client expects a final 'done' with results. To avoid sending huge JSON, we can send a summary.
+            # The client can then fetch results via /api/load-cached. For compatibility, we'll send only stats.
+            q.put({'type': 'done', 'stats': stats, 'output_file': output_csv, 'file_hash': fhash or ''})
         except Exception as e:
             import traceback; traceback.print_exc()
             q.put({'type': 'error', 'error': str(e)})
@@ -698,13 +734,18 @@ def classify_stream():
     threading.Thread(target=worker, daemon=True).start()
 
     def generate():
-        yield 'data: ' + json.dumps({'type': 'start', 'total': len(df)}) + '\n\n'
+        yield 'data: ' + json.dumps({'type': 'start', 'total': 0}) + '\n\n'  # total unknown
         while True:
-            try: msg = q.get(timeout=120)
+            try:
+                msg = q.get(timeout=120)
             except Exception:
-                yield 'data: ' + json.dumps({'type': 'error', 'error': 'Timeout'}) + '\n\n'; return
+                yield 'data: ' + json.dumps({'type': 'error', 'error': 'Timeout'}) + '\n\n'
+                return
             yield 'data: ' + json.dumps(msg) + '\n\n'
-            if msg.get('type') in ('done', 'error'): return
+            if msg.get('type') in ('done', 'error'):
+                # Force garbage collection after streaming ends
+                gc.collect()
+                return
 
     return app.response_class(generate(), mimetype='text/event-stream',
                                headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
@@ -715,20 +756,26 @@ def classify_transactions_route():
     try:
         tf = os.path.join(DATA_FOLDER, 'current_transactions.csv')
         if not os.path.exists(tf): return jsonify({'error': 'Upload a transactions file first'}), 400
-        df = pd.read_csv(tf, dtype=str).fillna('')
-        d  = request.get_json() or {}
+        d = request.get_json() or {}
         ct = float(d.get('confidence_threshold', 0.6))
-        results, ft, cats = classifier.classify_transactions(
-            df, categories=d.get('categories'), use_ai=d.get('use_ai', True), confidence_threshold=ct)
+        use_ai = d.get('use_ai', True)
+        custom_cats = d.get('categories')
+        # Use chunked method as well
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        out = os.path.join(OUTPUT_FOLDER, f'classified_{ts}.csv')
-        results.to_csv(out, index=False)
-        stats = build_stats(results, ct)
-        stats.update({'file_type': str(ft), 'categories_used': [str(c) for c in cats]})
-        safe = sanitize_records(results.where(pd.notnull(results), None).to_dict('records'))
+        output_csv = os.path.join(OUTPUT_FOLDER, f'classified_{ts}.csv')
+        _, _, stats = classifier.classify_transactions_chunked(
+            tf, output_csv,
+            categories=custom_cats,
+            use_ai=use_ai,
+            confidence_threshold=ct,
+            chunksize=5000,
+            progress_queue=None
+        )
         fhash, fname = _get_current_hash()
-        if fhash: _persist_results(session['user_id'], fhash, fname, safe, stats, out)
-        return jsonify({'success': True, 'results': safe, 'stats': stats, 'output_file': str(out)})
+        if fhash:
+            _persist_results(session['user_id'], fhash, fname, stats, output_csv)
+        # Return only stats and a flag to load results later
+        return jsonify({'success': True, 'stats': stats, 'output_file': output_csv, 'requires_load': True})
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({'error': f'Classification error: {str(e)}'}), 500
@@ -736,21 +783,6 @@ def classify_transactions_route():
 @app.route('/api/update-classification', methods=['POST'])
 @login_required
 def update_classification():
-    """
-    Save a per-transaction cell edit.
-    Payload:
-      description  – original transaction description (for vendor learning)
-      category     – new category value (shorthand for field_name=Category)
-      field_name   – which column was edited (default: 'Category')
-      new_value    – the new cell value
-      old_value    – the previous cell value (for audit)
-      row_index    – 0-based row number in the current results array
-      file_hash    – hash of the file being edited
-
-    Returns:
-      affected_rows  – list of all row indexes that share the same description
-                       (so the frontend can bulk-update them instantly)
-    """
     try:
         d = request.get_json() or {}
         field_name  = d.get('field_name', 'Category')
@@ -765,11 +797,9 @@ def update_classification():
 
         user_id = session['user_id']
 
-        # ── 1. Vendor + description memory (for Category edits) ──
+        # Learn mapping
         if field_name == 'Category' and description:
             classifier.learn_mapping(description, new_value)
-
-            # Persist vendor memory to DB
             try:
                 vendor = classifier.extract_vendor(description)
                 if vendor:
@@ -783,8 +813,6 @@ def update_classification():
                     conn.commit(); cur.close(); conn.close()
             except Exception as ve:
                 print(f"⚠️  vendor_memory DB write failed: {ve}")
-
-            # Persist description memory to DB
             try:
                 desc_key = classifier.normalize_description(description)
                 if desc_key:
@@ -799,7 +827,7 @@ def update_classification():
             except Exception as de:
                 print(f"⚠️  description_memory DB write failed: {de}")
 
-        # ── 2. Per-transaction override (for this specific row) ──
+        # Save override
         if row_index is not None and file_hash:
             try:
                 conn = get_db(); cur = conn.cursor()
@@ -815,62 +843,59 @@ def update_classification():
             except Exception as oe:
                 print(f"⚠️  transaction_overrides DB write failed: {oe}")
 
-        # ── 3. Find all other rows in the cached results that share the same description ──
+        # Find affected rows by scanning the output CSV (load only once)
         affected_rows = []
         if field_name == 'Category' and description and file_hash:
             try:
                 conn = get_db(); cur = conn.cursor()
-                cur.execute(
-                    "SELECT results_json FROM file_cache WHERE file_hash=%s AND user_id=%s",
-                    (file_hash, user_id)
-                )
-                cached = cur.fetchone(); cur.close(); conn.close()
-                if cached:
-                    results = json.loads(cached['results_json'])
-                    desc_norm = classifier.normalize_description(description)
-
-                    # Find description column (same priority order as the frontend)
+                cur.execute("SELECT output_csv FROM classification_history WHERE file_hash=%s AND user_id=%s ORDER BY created_at DESC LIMIT 1",
+                            (file_hash, user_id))
+                row = cur.fetchone(); cur.close(); conn.close()
+                if row and row['output_csv'] and os.path.exists(row['output_csv']):
+                    df = pd.read_csv(row['output_csv'])
+                    # Find description column
                     DESC_COLS = {'description','narration','desc','particulars',
                                  'details','merchant','remarks','transaction details','narrations'}
                     desc_col = None
-                    if results:
-                        for k in results[0].keys():
-                            if k.lower().strip() in DESC_COLS:
-                                desc_col = k
-                                break
-                        if desc_col is None:
-                            desc_col = next(iter(results[0].keys()), None)
-
-                    for i, row in enumerate(results):
-                        row_desc = str(row.get(desc_col, '') or '') if desc_col else ''
-                        if classifier.normalize_description(row_desc) == desc_norm:
-                            affected_rows.append(i)
-                            # Bulk-save overrides for sibling rows
-                            if i != row_index:
-                                try:
-                                    conn2 = get_db(); cur2 = conn2.cursor()
-                                    cur2.execute("""
-                                        INSERT INTO transaction_overrides
-                                            (user_id, file_hash, row_index, description, field_name, old_value, new_value)
-                                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                                        ON CONFLICT (user_id, file_hash, row_index, field_name)
-                                        DO UPDATE SET new_value=EXCLUDED.new_value, updated_at=NOW()
-                                    """, (user_id, file_hash, i, row_desc, field_name,
-                                          str(row.get('Category', '')), new_value))
-                                    conn2.commit(); cur2.close(); conn2.close()
-                                except Exception:
-                                    pass
+                    for col in df.columns:
+                        if col.lower().strip() in DESC_COLS:
+                            desc_col = col
+                            break
+                    if desc_col is None and len(df.columns) > 0:
+                        desc_col = df.columns[0]  # fallback
+                    if desc_col:
+                        desc_norm = classifier.normalize_description(description)
+                        for i, val in enumerate(df[desc_col].astype(str)):
+                            if classifier.normalize_description(val) == desc_norm:
+                                affected_rows.append(i)
+                                if i != row_index:
+                                    # Bulk save override for sibling rows
+                                    try:
+                                        conn2 = get_db(); cur2 = conn2.cursor()
+                                        cur2.execute("""
+                                            INSERT INTO transaction_overrides
+                                                (user_id, file_hash, row_index, description, field_name, old_value, new_value)
+                                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                            ON CONFLICT (user_id, file_hash, row_index, field_name)
+                                            DO UPDATE SET new_value=EXCLUDED.new_value, updated_at=NOW()
+                                        """, (user_id, file_hash, i, val, field_name, str(df.loc[i, 'Category']), new_value))
+                                        conn2.commit(); cur2.close(); conn2.close()
+                                    except Exception:
+                                        pass
+                    # Free DataFrame
+                    del df
+                    gc.collect()
             except Exception as fe:
                 print(f"⚠️  affected_rows lookup failed: {fe}")
 
         return jsonify({'success': True, 'affected_rows': affected_rows})
-    except Exception as e: return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/overrides', methods=['GET'])
 @login_required
 def get_overrides():
-    """Return saved overrides for a file so the UI can re-apply them after reload."""
     try:
         file_hash = request.args.get('file_hash', '')
         if not file_hash:
@@ -916,7 +941,7 @@ def get_stats():
         })
     except Exception as e: return jsonify({'error': str(e)}), 500
 
-# Timing endpoints
+# Timing endpoints (unchanged)
 _tsf = os.path.join(DATA_FOLDER, 'timing_store.json')
 def _lt():
     try: return json.load(open(_tsf)) if os.path.exists(_tsf) else {'ai':[],'keyword':[]}

@@ -3,11 +3,59 @@ import re
 import json
 import os
 import math
-from datetime import datetime
 from typing import List, Dict, Tuple, Optional
 
 
 class ExpenseClassifier:
+    # Built-in rules as a class constant (shared across instances)
+    BUILTIN_RULES = {
+        'Food & Dining': ['swiggy', 'zomato', 'restaurant', 'cafe', 'food', 'pizza', 'burger',
+                          'bakery', 'starbucks', 'mcdonalds', 'kfc', 'dominos', 'canteen',
+                          'dunzo', 'zepto food', 'blinkit food', 'haldiram', 'subway'],
+        'Shopping & Retail': ['amazon', 'flipkart', 'myntra', 'nykaa', 'ajio', 'shop', 'store',
+                              'mart', 'retail', 'mall', 'bazaar', 'bigbasket', 'blinkit', 'zepto',
+                              'vijay sales', 'croma', 'reliance digital', 'meesho', 'snapdeal',
+                              'tatacliq', 'd mart', 'dmart', 'jiomart'],
+        'Transport & Travel': ['uber', 'ola', 'rapido', 'redbus', 'irctc', 'airline', 'flight',
+                               'train', 'bus', 'taxi', 'cab', 'metro', 'petrol', 'fuel',
+                               'makemytrip', 'easytrip', 'easymytrip', 'indigo', 'spicejet',
+                               'goibibo', 'indian railways', 'namma metro'],
+        'Utilities & Bills': ['electricity', 'water', 'gas', 'broadband', 'airtel', 'jio', 'bsnl',
+                              'vodafone', 'internet', 'mobile', 'recharge', 'bill', 'tata power',
+                              'bescom', 'msedcl', 'tneb', 'act fibernet', 'hathway'],
+        'Healthcare & Medical': ['hospital', 'clinic', 'pharmacy', 'medical', 'doctor', 'health',
+                                 'medicine', 'lab', 'diagnostic', 'apollo', 'fortis', 'dental',
+                                 'medplus', 'netmeds', 'pharmeasy', '1mg', 'eye hospital'],
+        'Entertainment': ['netflix', 'amazon prime', 'hotstar', 'spotify', 'youtube', 'cinema',
+                           'movie', 'pvr', 'inox', 'bookmyshow', 'disney', 'zee5', 'sonyliv'],
+        'Software & Subscriptions': ['aws', 'azure', 'google cloud', 'github', 'slack', 'zoom',
+                                     'microsoft', 'adobe', 'chatgpt', 'openai', 'googleworksp',
+                                     'google workspace', 'dropbox', 'notion', 'figma', 'canva',
+                                     'hubspot', 'zoho', 'freshworks', 'cloudflare', 'digitalocean'],
+        'Education': ['school', 'college', 'university', 'coaching', 'course', 'udemy', 'byju',
+                      'unacademy', 'tuition', 'coursera', 'skillshare', 'vedantu'],
+        'Rent & Housing': ['rent', 'lease', 'housing', 'society', 'maintenance', 'flat', 'apartment',
+                            'pg payment', 'hostel', 'nobroker'],
+        'Salary & Income': ['salary', 'payroll', 'income', 'wages', 'stipend', 'bonus',
+                             'incentive', 'commission'],
+        'Transfers': ['transfer', 'imps', 'rtgs', 'sent to', 'received from', 'neft cr', 'neft dr'],
+        'ATM & Cash': ['atm', 'cash withdrawal', 'cash deposit', 'chq dep', 'cheque deposit',
+                       'cash dep', 'cdm'],
+        'Insurance': ['insurance', 'lic', 'premium', 'policy', 'bajaj allianz', 'hdfc ergo',
+                       'icici lombard', 'star health', 'care health'],
+        'Investment & Savings': ['mutual fund', 'zerodha', 'groww', 'upstox', 'stocks', 'sip',
+                                 'ppf', 'nps', 'investment', 'smallcase'],
+        'Taxes & Government': ['tax', 'gst', 'income tax', 'govt', 'challan', 'tds', 'mca',
+                                'epfo', 'profession tax', 'pt payment', 'esi', 'icegate',
+                                'customs duty', 'advance tax', 'itns 280', 'itns 281'],
+        'EMI & Loan Repayment': ['emi', 'loan emi', 'home loan', 'car loan', 'personal loan',
+                                  'nach dr', 'enach', 'ecs debit', 'loan repayment', 'term loan'],
+        'Professional & Legal Fees': ['consulting', 'legal', 'audit', 'accounting', 'lawyer',
+                                       'chartered accountant', 'ca firm', 'advocate'],
+        'Marketing & Advertising': ['google ads', 'facebook ads', 'advertising', 'marketing',
+                                     'meta ads', 'instagram ads', 'linkedin ads', 'indiamart'],
+    }
+
     def __init__(self):
         self.categories = []           # list of full row dicts from master
         self.category_keywords = {}    # account_name -> [keywords]
@@ -20,6 +68,20 @@ class ExpenseClassifier:
         self.description_memory_file = 'data/description_memory.json'
         self.client = None
         self.ai_provider = None
+
+        # Pre-compile regex patterns for speed & memory
+        self.clean_pattern = re.compile(
+            r'^(upi|neft|imps|rtgs|pos|atm|trf|ach|wire|nach|si|enach|'
+            r'me dc si|billdesk|razorpay\*|payu\*|ccavenue\*|cashfree\*|'
+            r'paytm\*|phonepe\*|gpay\*|googlepay\*|mobikwik\*|freecharge\*|'
+            r'iob|sbi|hdfc|icici|axis|kotak|yes bank|bob|pnb|'
+            r'cdm deposit|cash dep|chq dep|cheque dep)\s*[-:/\*]?\s*',
+            re.IGNORECASE
+        )
+        self.id_pattern = re.compile(r'\b[a-z0-9]{12,}\b', re.IGNORECASE)
+        self.digit_pattern = re.compile(r'\b\d{6,}\b', re.IGNORECASE)
+        self.non_alnum_pattern = re.compile(r'[^a-z0-9\s&]', re.IGNORECASE)
+        self.whitespace_pattern = re.compile(r'\s+')
 
         self.load_vendor_memory()
         self.load_description_memory()
@@ -77,42 +139,20 @@ class ExpenseClassifier:
             json.dump(self.description_memory, f, indent=2)
 
     def normalize_description(self, description: str) -> str:
-        """
-        Produce a stable vendor-identity key from a raw transaction description.
-        Strips UPI trace IDs, IFSC bank routing codes, reference numbers and
-        suffix noise so that all transactions for the same payee collapse to
-        the same key regardless of which branch / payment reference was used.
-
-        Examples:
-          "UPI-AMAZON INDIA-AMAZONUPI@APL-UTIB0000100-512366274028-YOU ARE PAYING FOR"
-          "UPI-AMAZON INDIA-AMAZONUPI@APL-HDFC0000001-999888777666-YOU ARE PAYING FOR"
-          → both → "upi amazon india amazonupi apl"
-
-          "UPI-INDIAN RAILWAYS CATE-IRCTC.RAZORPAY@ICICI-ICIC0000001-..."
-          → "upi indian railways cate irctc"
-        """
         s = str(description).lower()
-        # Remove pure numeric sequences 5+ digits (trace IDs, amounts, dates)
         s = re.sub(r'\b\d{5,}\b', '', s)
-        # Remove common suffix noise phrases
         s = re.sub(r'you are paying for.*$', '', s)
         s = re.sub(r'payment to.*$', '', s)
-        # Keep only alphanumeric + space
         s = re.sub(r'[^a-z0-9\s]', ' ', s)
-        # Drop tokens that are IFSC-style bank routing codes:
-        # alphanumeric 6+ chars containing BOTH letters and digits
-        # e.g. UTIB0000100, HDFC0000001, K4RH44MPAN525PGWCQ
         tokens = s.split()
+        # Remove IFSC-like tokens (alnum 6+ chars with both letters and digits)
         clean = [t for t in tokens
                  if not (len(t) >= 6
                          and re.search(r'[0-9]', t)
                          and re.search(r'[a-z]', t))]
-        # Take only the first 5 tokens — enough for vendor identity,
-        # short enough to avoid per-transaction noise bleeding in
         return ' '.join(clean[:5]).strip()
 
     def learn_description_mapping(self, description: str, category: str):
-        """Store a user-confirmed category keyed on the normalized description."""
         key = self.normalize_description(description)
         if key:
             self.description_memory[key] = category
@@ -123,12 +163,6 @@ class ExpenseClassifier:
     # ─────────────────────────────────────────────────────────
 
     def load_from_master_rows(self, rows: List[dict]):
-        """
-        Load category master from a list of dicts (from DB or parsed Excel).
-        Expected keys (case-insensitive): account_name, code, llm_keywords,
-        repeating_keywords, gst_flag, tds_section, boe_flag,
-        if_narration_keyword, if_not_party_name_keyword, is_active
-        """
         self.categories = []
         self.category_keywords = {}
         self.category_meta = {}
@@ -170,7 +204,6 @@ class ExpenseClassifier:
             }
             self.categories.append({'Category': name, **self.category_meta[name]})
 
-            # Collect keywords from llm_keywords + repeating_keywords
             kws = set()
             for kf in ('llm_keywords', 'LLM Keywords', 'llmkeywords',
                        'repeating_keywords', 'repeatingKeywords', 'repeatingkeywords'):
@@ -182,7 +215,6 @@ class ExpenseClassifier:
                             kws.add(k)
             self.category_keywords[name] = list(kws)
 
-            # Conditional rules
             if_narr     = _get(row, 'if_narration_keyword', 'if(narrationKeyword)',
                                 'ifnarrationkeyword', 'if_narration')
             if_not_party = _get(row, 'if_not_party_name_keyword', 'ifNot(partyNameKeyword)',
@@ -198,29 +230,6 @@ class ExpenseClassifier:
         total_kws = sum(len(v) for v in self.category_keywords.values())
         print(f"✅ Loaded {len(self.categories)} categories, {total_kws} keywords, "
               f"{len(self.conditional_rules)} conditional rules")
-
-    def load_categories_from_master(self, df: pd.DataFrame, category_names: List[str]):
-        """Legacy shim — convert DataFrame to row dicts and call load_from_master_rows."""
-        rows = df.to_dict('records')
-        # Normalise column names to snake_case keys the loader understands
-        norm_rows = []
-        for row in rows:
-            norm = {}
-            for k, v in row.items():
-                nk = str(k).lower().replace(' ', '_').replace('-', '_').replace('\n', '_')
-                norm[nk] = v
-            norm_rows.append(norm)
-        self.load_from_master_rows(norm_rows)
-
-    def load_categories(self, df: pd.DataFrame):
-        """Simple category/keywords CSV — kept for backwards compat."""
-        rows = []
-        for _, r in df.iterrows():
-            rows.append({
-                'account_name': str(r.get('Category', '') or ''),
-                'llm_keywords': str(r.get('Keywords', '') or ''),
-            })
-        self.load_from_master_rows(rows)
 
     # ─────────────────────────────────────────────────────────
     #  Classification helpers
@@ -282,18 +291,11 @@ class ExpenseClassifier:
         if not description or str(description).lower() in ('nan', 'none', ''):
             return ""
         desc = str(description).lower()
-        desc = re.sub(
-            r'^(upi|neft|imps|rtgs|pos|atm|trf|ach|wire|nach|si|enach|'
-            r'me dc si|billdesk|razorpay\*|payu\*|ccavenue\*|cashfree\*|'
-            r'paytm\*|phonepe\*|gpay\*|googlepay\*|mobikwik\*|freecharge\*|'
-            r'iob|sbi|hdfc|icici|axis|kotak|yes bank|bob|pnb|'
-            r'cdm deposit|cash dep|chq dep|cheque dep)\s*[-:/\*]?\s*',
-            '', desc
-        )
-        desc = re.sub(r'\b[a-z0-9]{12,}\b', '', desc)
-        desc = re.sub(r'\b\d{6,}\b', '', desc)
-        desc = re.sub(r'[^a-z0-9\s&]', ' ', desc)
-        desc = re.sub(r'\s+', ' ', desc).strip()
+        desc = self.clean_pattern.sub('', desc)
+        desc = self.id_pattern.sub('', desc)
+        desc = self.digit_pattern.sub('', desc)
+        desc = self.non_alnum_pattern.sub(' ', desc)
+        desc = self.whitespace_pattern.sub(' ', desc).strip()
         return desc
 
     def extract_vendor(self, description: str) -> str:
@@ -305,21 +307,18 @@ class ExpenseClassifier:
         clean_desc = self.preprocess_description(description)
         raw_lower  = description.lower()
 
-        # ── 0a. User description-pattern memory (highest priority) ──
         desc_key = self.normalize_description(description)
         if desc_key and desc_key in self.description_memory:
             mem_cat = self.description_memory[desc_key]
             if mem_cat in categories:
                 return mem_cat, 0.99
 
-        # ── 0b. Vendor memory ──
         vendor = self.extract_vendor(description)
         if vendor and vendor in self.vendor_memory:
             mem_cat = self.vendor_memory[vendor]
             if mem_cat in categories:
                 return mem_cat, 0.95
 
-        # ── 1. Conditional rules (if_narration + if_not_party) ──
         for rule in self.conditional_rules:
             name = rule['account_name']
             if name not in categories:
@@ -337,7 +336,6 @@ class ExpenseClassifier:
                     continue
             return name, 0.92
 
-        # ── 2. Standard keyword match (master keywords) ──
         best_match = None
         best_score = 0.0
 
@@ -354,56 +352,8 @@ class ExpenseClassifier:
         if best_match:
             return best_match, best_score
 
-        # ── 3. Built-in fallback rules ──
-        builtin_rules = {
-            'Food & Dining': ['swiggy', 'zomato', 'restaurant', 'cafe', 'food', 'pizza', 'burger',
-                              'bakery', 'starbucks', 'mcdonalds', 'kfc', 'dominos', 'canteen',
-                              'dunzo', 'zepto food', 'blinkit food', 'haldiram', 'subway'],
-            'Shopping & Retail': ['amazon', 'flipkart', 'myntra', 'nykaa', 'ajio', 'shop', 'store',
-                                  'mart', 'retail', 'mall', 'bazaar', 'bigbasket', 'blinkit', 'zepto',
-                                  'vijay sales', 'croma', 'reliance digital', 'meesho', 'snapdeal',
-                                  'tatacliq', 'd mart', 'dmart', 'jiomart'],
-            'Transport & Travel': ['uber', 'ola', 'rapido', 'redbus', 'irctc', 'airline', 'flight',
-                                   'train', 'bus', 'taxi', 'cab', 'metro', 'petrol', 'fuel',
-                                   'makemytrip', 'easytrip', 'easymytrip', 'indigo', 'spicejet',
-                                   'goibibo', 'indian railways', 'namma metro'],
-            'Utilities & Bills': ['electricity', 'water', 'gas', 'broadband', 'airtel', 'jio', 'bsnl',
-                                  'vodafone', 'internet', 'mobile', 'recharge', 'bill', 'tata power',
-                                  'bescom', 'msedcl', 'tneb', 'act fibernet', 'hathway'],
-            'Healthcare & Medical': ['hospital', 'clinic', 'pharmacy', 'medical', 'doctor', 'health',
-                                     'medicine', 'lab', 'diagnostic', 'apollo', 'fortis', 'dental',
-                                     'medplus', 'netmeds', 'pharmeasy', '1mg', 'eye hospital'],
-            'Entertainment': ['netflix', 'amazon prime', 'hotstar', 'spotify', 'youtube', 'cinema',
-                               'movie', 'pvr', 'inox', 'bookmyshow', 'disney', 'zee5', 'sonyliv'],
-            'Software & Subscriptions': ['aws', 'azure', 'google cloud', 'github', 'slack', 'zoom',
-                                         'microsoft', 'adobe', 'chatgpt', 'openai', 'googleworksp',
-                                         'google workspace', 'dropbox', 'notion', 'figma', 'canva',
-                                         'hubspot', 'zoho', 'freshworks', 'cloudflare', 'digitalocean'],
-            'Education': ['school', 'college', 'university', 'coaching', 'course', 'udemy', 'byju',
-                          'unacademy', 'tuition', 'coursera', 'skillshare', 'vedantu'],
-            'Rent & Housing': ['rent', 'lease', 'housing', 'society', 'maintenance', 'flat', 'apartment',
-                                'pg payment', 'hostel', 'nobroker'],
-            'Salary & Income': ['salary', 'payroll', 'income', 'wages', 'stipend', 'bonus',
-                                 'incentive', 'commission'],
-            'Transfers': ['transfer', 'imps', 'rtgs', 'sent to', 'received from', 'neft cr', 'neft dr'],
-            'ATM & Cash': ['atm', 'cash withdrawal', 'cash deposit', 'chq dep', 'cheque deposit',
-                           'cash dep', 'cdm'],
-            'Insurance': ['insurance', 'lic', 'premium', 'policy', 'bajaj allianz', 'hdfc ergo',
-                           'icici lombard', 'star health', 'care health'],
-            'Investment & Savings': ['mutual fund', 'zerodha', 'groww', 'upstox', 'stocks', 'sip',
-                                     'ppf', 'nps', 'investment', 'smallcase'],
-            'Taxes & Government': ['tax', 'gst', 'income tax', 'govt', 'challan', 'tds', 'mca',
-                                    'epfo', 'profession tax', 'pt payment', 'esi', 'icegate',
-                                    'customs duty', 'advance tax', 'itns 280', 'itns 281'],
-            'EMI & Loan Repayment': ['emi', 'loan emi', 'home loan', 'car loan', 'personal loan',
-                                      'nach dr', 'enach', 'ecs debit', 'loan repayment', 'term loan'],
-            'Professional & Legal Fees': ['consulting', 'legal', 'audit', 'accounting', 'lawyer',
-                                           'chartered accountant', 'ca firm', 'advocate'],
-            'Marketing & Advertising': ['google ads', 'facebook ads', 'advertising', 'marketing',
-                                         'meta ads', 'instagram ads', 'linkedin ads', 'indiamart'],
-        }
-
-        for rule_cat, keywords in builtin_rules.items():
+        # Use class-level builtin rules
+        for rule_cat, keywords in self.BUILTIN_RULES.items():
             matched_cat = next(
                 (c for c in categories if rule_cat.lower() in c.lower() or c.lower() in rule_cat.lower()),
                 None
@@ -459,11 +409,9 @@ class ExpenseClassifier:
             response_text = chat.choices[0].message.content.strip()
             response_text = re.sub(r'^```json\s*|\s*```$', '', response_text).strip()
             response_text = re.sub(r'^```\s*|\s*```$', '', response_text).strip()
-            # Strip any plain-text preamble before the JSON object (e.g. "Sure! {...")
             brace = response_text.find('{')
             if brace > 0:
                 response_text = response_text[brace:]
-            # Strip anything after the closing brace
             rbrace = response_text.rfind('}')
             if rbrace >= 0:
                 response_text = response_text[:rbrace + 1]
@@ -525,6 +473,145 @@ class ExpenseClassifier:
                     return col
         return None
 
+    def _parse_amount(self, value) -> Optional[float]:
+        if value is None:
+            return None
+        try:
+            raw = str(value).replace(',', '').replace('₹', '').replace('$', '').strip()
+            val = float(raw)
+            return None if math.isnan(val) else val
+        except Exception:
+            return None
+
+    # ------------------------------------------------------------------
+    # NEW: Chunked classification for low memory usage
+    # ------------------------------------------------------------------
+    def classify_transactions_chunked(self, input_filepath: str, output_filepath: str,
+                                       categories: List[str] = None, use_ai: bool = True,
+                                       confidence_threshold: float = 0.6,
+                                       chunksize: int = 5000, progress_queue=None) -> Tuple[str, List[str], Dict]:
+        """
+        Process a large CSV file in chunks and write results directly to output CSV.
+        Returns (output_filepath, categories_used, stats_dict).
+        """
+        import gc
+
+        # Detect file type from first few rows
+        sample_df = pd.read_csv(input_filepath, nrows=5, dtype=str)
+        file_type = self.detect_file_type(sample_df)
+
+        if not categories:
+            if self.categories_loaded:
+                categories = [str(cat.get('Category', '')) for cat in self.categories if cat.get('Category')]
+            else:
+                categories = self.get_auto_categories(file_type)
+
+        # Find required columns
+        desc_col = self.find_column(sample_df, [
+            'description', 'narration', 'desc', 'particulars', 'details',
+            'merchant', 'payee', 'remarks', 'transaction details', 'narrations'
+        ])
+        amount_col = self.find_column(sample_df, ['amount', 'debit', 'withdrawal', 'credit', 'value'])
+        # Date column not strictly needed for classification but may be kept
+
+        if desc_col is None:
+            # fallback: use first string column
+            for col in sample_df.columns:
+                if sample_df[col].dtype == object:
+                    desc_col = col
+                    break
+            if desc_col is None:
+                raise ValueError("Could not find a description/narration column")
+
+        # Count total rows for progress (rough estimate)
+        total_rows = sum(1 for _ in open(input_filepath)) - 1
+        processed = 0
+
+        # Stats accumulators
+        stats = {
+            'total': 0,
+            'high_confidence': 0,
+            'needs_review': 0,
+            'ai_classified': 0,
+            'keyword_classified': 0,
+            'category_totals': {},
+            'category_counts': {},
+            'file_type': file_type,
+            'categories_used': categories,
+        }
+
+        first_chunk = True
+        # Use low_memory=False to avoid mixed type warnings; we read as strings anyway
+        for chunk in pd.read_csv(input_filepath, chunksize=chunksize, dtype=str, low_memory=False):
+            result_cats = []
+            confidences = []
+            methods = []
+            metas = []
+
+            for idx, row in chunk.iterrows():
+                desc = str(row.get(desc_col, ''))
+                amt = self._parse_amount(row.get(amount_col)) if amount_col else None
+                cat, conf, meth = self.classify_single(desc, categories, amt, use_ai, context=f'File type: {file_type}')
+                meta = self.category_meta.get(cat, {})
+
+                result_cats.append(cat)
+                confidences.append(round(conf, 3))
+                methods.append(meth)
+                metas.append(meta)
+
+                # Update stats
+                stats['total'] += 1
+                if conf >= confidence_threshold:
+                    stats['high_confidence'] += 1
+                else:
+                    stats['needs_review'] += 1
+                if meth == 'ai':
+                    stats['ai_classified'] += 1
+                elif meth == 'keyword':
+                    stats['keyword_classified'] += 1
+
+                # Amount-based totals (if amount exists and is positive)
+                if amt and amt > 0:
+                    stats['category_totals'][cat] = stats['category_totals'].get(cat, 0) + abs(amt)
+                stats['category_counts'][cat] = stats['category_counts'].get(cat, 0) + 1
+
+                processed += 1
+                if progress_queue:
+                    progress_queue.put({
+                        'type': 'progress',
+                        'processed': processed,
+                        'total': total_rows,
+                        'category': cat,
+                        'method': meth,
+                        'confidence': round(conf, 3),
+                    })
+
+            # Add columns to chunk
+            chunk['Category'] = result_cats
+            chunk['Confidence'] = confidences
+            chunk['Method'] = methods
+            chunk['Code'] = [m.get('code', '') for m in metas]
+            chunk['GST_Flag'] = [m.get('gst_flag', '') for m in metas]
+            chunk['TDS_Section'] = [m.get('tds_section', '') for m in metas]
+            chunk['BOE_Flag'] = [m.get('boe_flag', '') for m in metas]
+            chunk['Status'] = ['Approved' if c >= confidence_threshold else 'Needs Review' for c in confidences]
+
+            # Write chunk
+            mode = 'w' if first_chunk else 'a'
+            header = first_chunk
+            chunk.to_csv(output_filepath, mode=mode, header=header, index=False)
+            first_chunk = False
+
+            # Free memory
+            del chunk
+            gc.collect()
+
+        if progress_queue:
+            progress_queue.put({'type': 'progress_done'})
+
+        return output_filepath, categories, stats
+
+    # Keep original method for small files / backward compatibility
     def classify_transactions(self, df: pd.DataFrame, categories: List[str] = None,
                                use_ai: bool = True, confidence_threshold: float = 0.6,
                                progress_queue=None):
@@ -559,16 +646,10 @@ class ExpenseClassifier:
             description = str(row[desc_col]) if desc_col else ''
             amount = None
             if amount_col:
-                try:
-                    raw = str(row[amount_col]).replace(',', '').replace('₹', '').replace('$', '').strip()
-                    val = float(raw)
-                    amount = None if math.isnan(val) else val
-                except Exception:
-                    pass
+                amount = self._parse_amount(row[amount_col])
 
             cat, conf, meth = self.classify_single(description, categories, amount, use_ai, context)
 
-            # Look up meta for output columns
             meta = self.category_meta.get(cat, {})
             codes.append(meta.get('code', ''))
             gst_flags.append(meta.get('gst_flag', ''))
@@ -621,5 +702,4 @@ class ExpenseClassifier:
         if vendor:
             self.vendor_memory[vendor] = category
             self.save_vendor_memory()
-        # Always store the full description pattern
         self.learn_description_mapping(description, category)
